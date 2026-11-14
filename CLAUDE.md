@@ -200,3 +200,9 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
   `PYTHONPATH=<this repository> pytest test/test_utils/test_jeditor_contract.py` — and judge the
   result against the same run on the commit before, since PyBreeze's own environment has failures
   of its own.
+
+## Git worktrees: merge and remove
+
+- Every git worktree created for a task must be finished off: merge its branch back into the branch it was started from, then remove the worktree (`git worktree remove <path>`) and delete its branch (`git branch -d <branch>`).
+- Do not leave worktrees behind when the work is done; check `git worktree list` before ending the task.
+- If a worktree cannot be merged yet, say so explicitly instead of leaving it behind silently.
