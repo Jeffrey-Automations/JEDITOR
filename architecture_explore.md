@@ -344,7 +344,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
-| `shell/workbench.py` | 658 | `Workbench(QObject)`：建立兩層分隔器並設為中央元件、登記面板（`register_view(spec, factory | widget)`；宿主程式與外掛用不必匯入 `ViewSpec` 的 `add_view(view_id, area, ...)`，選單建好之後才登記的面板會在檢視選單補上一項）、顯示 / 切換（`show_view`、`toggle_view`、三個區域的開關）、版面的取得 / 套用 / 存入設定 / 還原、從檔案樹開檔（空白分頁就地開，否則開新分頁）、換語言、關閉時讓每個面板收尾。`workbench_of(window)` 與 `reveal_view(window, view_id)` 讓其他模組不必知道面板在哪一區 |
+| `shell/workbench.py` | 674 | `Workbench(QObject)`：建立兩層分隔器並設為中央元件、登記面板（`register_view(spec, factory | widget)`；宿主程式與外掛用不必匯入 `ViewSpec` 的 `add_view(view_id, area, ...)`，選單建好之後才登記的面板會在檢視選單補上一項）、顯示 / 切換（`show_view`、`toggle_view`、三個區域的開關）、版面的取得 / 套用 / 存入設定 / 還原、從檔案樹開檔（空白分頁就地開，否則開新分頁）、換語言、關閉時讓每個面板收尾。`workbench_of(window)` 與 `reveal_view(window, view_id)` 讓其他模組不必知道面板在哪一區 |
 | `shell/activity_bar.py` | 112 | `ActivityBar(QToolBar)`：不能移動的直式工具列，每個側邊欄面板一個可勾選的圖示，第二側邊欄的排在最下面 |
 | `shell/view_container.py` | 188 | `ViewContainer`（標題 + 一疊面板）與 `LazyPage`：面板第一次顯示時才呼叫工廠函式建立，並包在可捲動區域裡；建立失敗只留下空頁 |
 | `shell/explorer_panel.py` | 97 | `ExplorerPanel`：工作區的檔案樹（只顯示名稱欄）與多根目錄時的選單；整個視窗共用一份 |

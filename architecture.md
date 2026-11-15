@@ -212,8 +212,8 @@ Plugin browser (pyside_ui/main_ui/plugin_browser/) → github_api.fetch_repo_tre
   before you move or rename a module. It merges its UI strings by mutating the exported
   `english_word_dict` and `traditional_chinese_word_dict` in place. Treat these names,
   `EditorMain`'s constructor and the attributes PyBreeze uses (`tab_widget`, `menu`, `help_menu`,
-  `dock_menu`, `run_menu`, `workbench` with its `add_view`, `show_view`, `restore_layout`,
-  `view_spec`, and `EditorWidget.project_treeview`, which in a window with a shell is the one tree
+  `dock_menu`, `run_menu`, `workbench` with its `add_view`, `show_view`, `is_view_shown`, `view_ids`,
+  `restore_layout` and `has_saved_layout`, and `EditorWidget.project_treeview`, which in a window with a shell is the one tree
   every tab shares) as a contract. PyBreeze applies a theme by setting `ui_style` and calling
   `startup_setting()`, falling back to `EditorMain.apply_style(style_name)`. The icon name
   `navigation` in `utils/theme/ui_icons.py` is PyBreeze's activity bar icon. PyBreeze calls `CodeEditor.reset_highlighter()` after changing a tab's file and

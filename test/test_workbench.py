@@ -241,6 +241,22 @@ class TestTheLayout:
         assert workbench.bottom_panel.isHidden()
 
     @pytest.mark.usefixtures("_layout_setting_untouched")
+    def test_a_first_start_has_no_saved_layout(self, workbench):
+        user_setting_dict[LAYOUT_SETTING_KEY] = {}
+        assert workbench.has_saved_layout() is False
+        workbench.save_layout()
+        assert workbench.has_saved_layout() is True
+
+    @pytest.mark.usefixtures("_layout_setting_untouched")
+    def test_a_view_added_after_the_first_restore_is_restored_by_a_second(self, workbench):
+        user_setting_dict[LAYOUT_SETTING_KEY] = {"side_view": "navigation"}
+        workbench.restore_layout()
+        assert workbench.side_bar.current_view() == VIEW_EXPLORER
+        workbench.add_view("navigation", "side", widget=QLabel("nav"), title="Navigation")
+        workbench.restore_layout()
+        assert workbench.is_view_shown("navigation")
+
+    @pytest.mark.usefixtures("_layout_setting_untouched")
     def test_a_corrupt_setting_restores_the_default_layout(self, workbench):
         user_setting_dict[LAYOUT_SETTING_KEY] = "not a layout"
         workbench.restore_layout()

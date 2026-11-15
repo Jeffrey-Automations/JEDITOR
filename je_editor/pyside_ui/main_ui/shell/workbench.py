@@ -555,6 +555,22 @@ class Workbench(QObject):
         self.apply_layout(layout_from_setting(user_setting_dict.get(LAYOUT_SETTING_KEY)))
         QTimer.singleShot(0, self, self._apply_sizes)
 
+    @staticmethod
+    def has_saved_layout() -> bool:
+        """
+        使用者設定裡有沒有存過版面
+        Whether the user settings hold a layout.
+
+        宿主程式用它分辨「第一次啟動」與「使用者上次就是這樣擺的」：前者可以先
+        顯示自己的面板，後者要照存下來的版面。
+        A host application tells a first start from a layout the user left this
+        way with it: the first may show the host's own view, and the second has
+        to follow what was saved.
+
+        :return: 有的話為 ``True`` / ``True`` when there is one
+        """
+        return bool(user_setting_dict.get(LAYOUT_SETTING_KEY))
+
     def save_layout(self) -> None:
         """把目前的版面記進使用者設定 / Record the current layout in the user settings."""
         user_setting_dict[LAYOUT_SETTING_KEY] = layout_to_setting(self.layout())
