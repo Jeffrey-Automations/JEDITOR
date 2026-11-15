@@ -15,7 +15,9 @@ from je_editor.pyside_ui.main_ui.editor.process_input import ProcessInput
 from je_editor.pyside_ui.main_ui.menu.run_menu.under_run_menu.utils import please_close_current_running_messagebox
 # 匯入日誌紀錄器
 # Import logger instance
+from je_editor.pyside_ui.main_ui.shell.workbench import reveal_view
 from je_editor.utils.logging.loggin_instance import jeditor_logger
+from je_editor.utils.shell.shell_views import VIEW_DEBUG_CONSOLE
 
 # 僅在型別檢查時匯入 EditorMain，避免循環依賴
 # Import EditorMain only for type checking (avoids circular dependency)
@@ -138,6 +140,7 @@ def run_debugger(ui_we_want_to_set: EditorMain) -> None:
                 code_exec = ExecManager(widget, program_encoding=ui_we_want_to_set.encoding)
                 code_exec.later_init()
                 code_exec.code_result = widget.debugger_result
+                reveal_view(ui_we_want_to_set, VIEW_DEBUG_CONSOLE)
                 code_exec.exec_code(
                     widget.current_file, exec_prefix=["-m", "pdb"]
                 )

@@ -20,7 +20,6 @@ if __name__ == "__main__":
         _log("Step 1: Importing Qt...")
         from PySide6.QtCore import QCoreApplication
         from PySide6.QtWidgets import QApplication
-        from qt_material import apply_stylesheet
 
         _log("Step 2: Importing JEditor...")
         from je_editor.pyside_ui.main_ui.main_editor import EditorMain
@@ -37,8 +36,8 @@ if __name__ == "__main__":
         _log("Step 5: Creating EditorMain(debug_mode=True)...")
         window = EditorMain(debug_mode=True)
 
-        _log("Step 6: Applying stylesheet...")
-        apply_stylesheet(app, theme="dark_amber.xml")
+        # The window applies the style its settings name; nothing is applied on top of it here.
+        _log("Step 6: Showing the window...")
         window.showMaximized()
 
         _log("Step 7: Entering event loop (quit in ~10s)...")

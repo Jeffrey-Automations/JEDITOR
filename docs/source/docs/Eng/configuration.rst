@@ -30,7 +30,8 @@ The main settings file controls editor behavior and appearance:
      - UI language (``English``, ``Traditional Chinese``, ``Simplified Chinese``,
        ``Japanese``, or plugin-provided). Taken from the system locale on a first run.
    * - ``ui_style``
-     - UI theme style file, e.g. ``dark_amber.xml``
+     - Window theme: ``jeditor_dark`` (default) or ``jeditor_light``, or a qt-material
+       style file such as ``dark_amber.xml``
    * - ``encoding``
      - Default file encoding (``utf-8``, ``GBK``, ``latin-1``)
    * - ``last_file``
@@ -54,6 +55,10 @@ The main settings file controls editor behavior and appearance:
        ``classic`` uses the earlier pattern-based highlighters for every language
    * - ``shortcuts``
      - Keys the user reassigned; only what differs from a default is stored
+   * - ``shell_layout``
+     - The window layout: whether the side bar, the bottom panel and the secondary side
+       bar are open, the view each shows, and their sizes. A missing or damaged value
+       falls back to the default layout, field by field
 
 user_color_setting.json
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -119,13 +124,39 @@ The provider in use is recorded as well. Unlike the two files above, the editor 
 write this one by default — only when saving is ticked in the AI settings dialog, because
 the key in it is plain text. You can also create it yourself.
 
+Window Layout
+-------------
+
+The window has four areas around an activity bar at its left edge:
+
+- **Side bar** (left) — Explorer, Outline, Run and Debug, Testing and TODO. The activity
+  bar switches between them, and clicking the current view's icon hides the side bar
+- **Editor tabs** (middle) — one tab per file, titled with the file's name; the tip shows
+  the whole path
+- **Bottom panel** — Output, Problems, Terminal, Source Control, Debug Console, Format
+  Check and Variables
+- **Secondary side bar** (right) — the AI chat
+
+The file tree and the output views belong to the window, not to a tab: a file clicked in
+the Explorer opens in a tab of its own (a blank, untouched tab is reused), and switching
+tabs leaves the tree and the output as they were. Views other than the Explorer and the
+output ones are built the first time they are shown.
+
+The **View** menu toggles each area and lists every view. Which areas are open, the view
+each shows and their sizes are stored as ``shell_layout`` and restored on the next start.
+Any panel can still be opened as a floating dock from the **Dock** menu.
+
 Theming
 --------
 
-JEditor supports dark and light themes via `qt-material <https://github.com/UN-GCPDS/qt-material>`_:
+JEditor has two built-in themes, **JEditor Dark** and **JEditor Light**, which style every
+part of the window. The dark and light styles of
+`qt-material <https://github.com/UN-GCPDS/qt-material>`_ remain available beside them:
 
-- **Default:** Dark Amber theme
-- Switch themes from the **UI Style** menu
+- **Default:** JEditor Dark (``jeditor_dark``). A project whose settings already name a
+  qt-material style keeps it
+- Switch themes from the **UI Style** menu; the built-in themes are listed first
+- The toolbar and activity bar icons are redrawn in the new theme's colors
 - The editor's own colors follow the window style: switching to a light theme moves the
   gutter, current-line and syntax colors to a light set. A color you picked yourself is
   left alone — only those still at a default follow the theme

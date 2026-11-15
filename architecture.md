@@ -1,7 +1,8 @@
 # JEditor Architecture
 
 > Short overview for people and agents. Per-module detail lives in [`architecture_explore.md`](architecture_explore.md).
-> Last verified: 2026-09-22 against `509dbfd` on `dev`. §2, §3, §5 and §6 re-checked 2026-10-08 on
+> Last verified: 2026-11-15, when the window shell and the built-in themes were added (`feat/modern-shell-ui`).
+> §2, §3, §5 and §6 were re-checked 2026-10-08 on
 > `roadmap/editor-next` when the core service layer was added; §6 against PyBreeze `16214a5`.
 
 ## 1. Purpose
@@ -18,12 +19,12 @@ window, and plugins extend it through a small registry API.
 | --- | --- |
 | `je_editor/__init__.py` | Public API (`__all__`): `start_editor`, `EditorMain`, `EDITOR_EXTEND_TAB`, `EditorWidget`, exceptions, language dicts, plugin registry functions |
 | `je_editor/__main__.py`, `je_editor/start_editor.py` | CLI entry and application bootstrap |
-| `je_editor/pyside_ui/main_ui/` | Main window `EditorMain` (`main_editor.py`), editor tab `EditorWidget` (`editor/`), menus (`menu/`), toolbar, panels, command palette, console, IPython, chat panel (`ai_widget/`), plugin browser, settings persistence (`save_settings/`) |
+| `je_editor/pyside_ui/main_ui/` | Main window `EditorMain` (`main_editor.py`), its shell (`shell/`: activity bar, side bar, bottom panel, secondary side bar, the shared explorer and output views, theme application), editor tab `EditorWidget` (`editor/`), menus (`menu/`), toolbar, panels, command palette, console, IPython, chat panel (`ai_widget/`), plugin browser, settings persistence (`save_settings/`) |
 | `je_editor/pyside_ui/code/` | `CodeEditor` (`plaintext_code_edit/`) plus its managers (folding, bookmarks, lint, LSP, diff/blame, snippets, multi-cursor), highlighters (`syntax/`), process runners (`code_process/`, `shell_process/`, `base_process_manager.py`) |
 | `je_editor/pyside_ui/dialog/`, `git_ui/`, `browser/` | Search/replace, shortcut, snippet and file dialogs; Git panel, commit graph, diff viewers; embedded QtWebEngine browser |
 | `je_editor/core/` | Service layer with no Qt import: `EditorServices` (`services/`) bundles the workspace model (`workspace/`), open documents (`document/`), the unified diagnostic model and store (`diagnostics/`), the language service registry (`language/`), and the interfaces for debug sessions (`debug/`), task execution (`process/`), remote sessions (`remote/`) and AI providers (`ai/`). `events/` and `registry/` replace Qt signals and per-feature registries. The window consumes the diagnostics part so far: the editor's `LintManager` and the Problems panel hold their findings in the unified model (roadmap `docs/roadmap/2026-editor-next.md`) |
 | `je_editor/adapters/` | Implementations of the `core/` interfaces, also Qt-free; third-party SDKs are imported at the point of use. `ai/`: `OpenAIProvider` (LangChain `ChatOpenAI`), `AnthropicProvider` (official `anthropic` SDK, streamed), the built-in registration and the `.jeditor/ai_config.json` reader/writer (which never logs the content). `default_services.py` builds an `EditorServices` with these registered `syntax/`: the Tree-sitter `SyntaxEngine` (`tree_sitter_engine.py`), its grammar table and query files (`grammar_table.py`, `queries/<language>/*.scm`), and `SyntaxLanguageService` `process/`: `LocalTaskRunner`, child processes started from an argument list. `debug/`: `DapSession`, a `DebugSession` that talks the Debug Adapter Protocol to an adapter process or a TCP port (`socket_channel.py`), and the debugpy adapter for Python. `remote/`: `SshRemoteSession`, a `RemoteSession` over the system `ssh` command (files, tasks, port forwarding and interpreter discovery through one helper run by the remote Python) |
-| `je_editor/utils/` | Pure logic with no widgets (only `multi_language/locale_match.py` imports Qt): text operations, encodings, sessions, diffs, symbols, LSP protocol, shortcut registry, theme colors, translations (`multi_language/`), logging, stdout/stderr redirect |
+| `je_editor/utils/` | Pure logic with no widgets (only `multi_language/locale_match.py` imports Qt): text operations, encodings, sessions, diffs, symbols, LSP protocol, shortcut registry, theme colors, the built-in themes' tokens, style sheet and icons (`theme/`), the shell's view table and layout state (`shell/`), translations (`multi_language/`), logging, stdout/stderr redirect |
 | `je_editor/code_scan/` | ruff runner and watchdog file monitor, run on worker threads |
 | `je_editor/git_client/` | Git access: `GitService` (GitPython) and `GitCLI` (subprocess), blame, HEAD baseline, hunk staging |
 | `je_editor/plugins/` | Plugin registry (`__init__.py`) and `jeditor_plugins/` loader (`plugin_loader.py`) |
@@ -52,6 +53,13 @@ Qt cannot be imported.
 - **Window services**: `EditorMain.services` is the window's `EditorServices`, built by
   `adapters/default_services.build_default_services()` and shut down in `closeEvent`. Panels read
   it with `getattr(window, "services", None)` and build their own when a host window has none.
+- **Window shell**: `EditorMain.workbench` (`pyside_ui/main_ui/shell/workbench.py`) owns the areas
+  around the editor tabs and the views in them. Views are registered by ID
+  (`utils/shell/shell_views.py`); other modules show one with `reveal_view(window, view_id)` and
+  never reach for a dock or a tab index. The file tree and the output views belong to the window:
+  an `EditorWidget` in a window with a shell points its `project_treeview`, `code_result`,
+  `git_gui` and related attributes at the shared ones, and builds its own only in a host window
+  without a shell.
 - **Custom tabs**: `EDITOR_EXTEND_TAB: Dict[str, Type[QWidget]]` in `pyside_ui/main_ui/main_editor.py`.
 - **Plugin API** (`je_editor/plugins/__init__.py`, re-exported from `je_editor`):
   `register_programming_language`, `register_natural_language`, `register_plugin_run_config`,
@@ -89,9 +97,11 @@ Qt cannot be imported.
 ```
 python -m je_editor -s → start_editor() → quiet_chromium_logging() → QApplication
   → load_external_plugins() → EditorMain(debug_mode)
-      [read .jeditor settings → pick language → menus/toolbar → redirect stdout/stderr
-       → EditorWidget tab + browser tab + EDITOR_EXTEND_TAB tabs → startup_setting()]
-  → apply_stylesheet(dark_amber.xml) → showMaximized() → app.exec() → os._exit()
+      [read .jeditor settings → pick language → Workbench (shell, shared explorer and output)
+       → menus/toolbar → redirect stdout/stderr
+       → EditorWidget tab + browser tab + EDITOR_EXTEND_TAB tabs
+       → startup_setting() [apply_ui_style(ui_style)] → workbench.restore_layout()]
+  → showMaximized() → app.exec() → os._exit()
 ```
 
 **Run code**
@@ -151,6 +161,15 @@ Plugin browser (pyside_ui/main_ui/plugin_browser/) → github_api.fetch_repo_tre
   `plugin_browser/github_api.py`, which restricts URL schemes and blocks path traversal.
 - **Extra tabs**: `EDITOR_EXTEND_TAB` in `je_editor/pyside_ui/main_ui/main_editor.py`, read once
   during `EditorMain.__init__`.
+- **Shell views**: `window.workbench.register_view(ViewSpec(view_id, area, title_key=..., icon=...,
+  title=...), factory)` adds a view to the side bar (`side`), the bottom panel (`bottom`) or the
+  secondary side bar (`secondary`); a side or secondary view gets an activity bar icon. The factory
+  runs the first time the view is shown; pass `widget=` instead for one already built.
+- **Window themes**: the token sets in `utils/theme/ui_theme.py` and the one QSS template in
+  `utils/theme/ui_stylesheet.py`. `apply_ui_style(window, style_name)`
+  (`pyside_ui/main_ui/shell/ui_style.py`) is the only place a style is applied: a built-in name
+  gets the template, any other name goes to qt-material. Icons are SVG text in
+  `utils/theme/ui_icons.py`, coloured from the tokens.
 - **Host-app mode**: `EditorMain(extend=True)`. In this mode `pyside_ui/main_ui/menu/set_menu_bar.py`
   skips the built-in Plugins menu (`menu/plugin_menu/build_plugin_menu.py`).
 - **Python highlighting rules**: `pyside_ui/code/syntax/syntax_setting.py`
@@ -191,8 +210,11 @@ Plugin browser (pyside_ui/main_ui/plugin_browser/) → github_api.fetch_repo_tre
   `write_file_with_encoding` (`write_file`, listed here before, is pinned too). Grep PyBreeze
   before you move or rename a module. It merges its UI strings by mutating the exported
   `english_word_dict` and `traditional_chinese_word_dict` in place. Treat these names,
-  `EditorMain`'s constructor and the attributes PyBreeze uses (`tab_widget`, `menu`, `help_menu`)
-  as a contract. PyBreeze calls `CodeEditor.reset_highlighter()` after changing a tab's file and
+  `EditorMain`'s constructor and the attributes PyBreeze uses (`tab_widget`, `menu`, `help_menu`,
+  `dock_menu`, `run_menu`, `workbench` with its `register_view`, `show_view`, `explorer` and
+  `output`, and `EditorWidget.project_treeview`, which in a window with a shell is the one tree
+  every tab shares) as a contract. PyBreeze applies a theme by setting `ui_style` and calling
+  `startup_setting()`, or `apply_ui_style()` directly. PyBreeze calls `CodeEditor.reset_highlighter()` after changing a tab's file and
   after `register_programming_language()`; the keywords it registers for `.json` and YAML suffixes
   are laid over whichever highlighter colours those files. `EditorMain` also sets `services`;
   PyBreeze does not use that name today. **PyBreeze keeps contract tests of its own**,
@@ -250,6 +272,7 @@ Update it in the same commit when any of these changes:
 - the dependency direction in §2, or the list of modules allowed to break it;
 - the startup, run or plugin flow in §4;
 - an extension point in §5;
+- the shell's areas, its view registration or the way a style is applied (§3, §5);
 - a cross-repo contract in §6 (`EditorMain` signature or extend mode, the exported language dicts,
   `FrontEngineMainUI` usage, plugin conventions, the default plugin repo, the PySide6 pin);
 - a CLAUDE.md section that §7 points to is renamed.

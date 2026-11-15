@@ -1,7 +1,7 @@
 # JEditor 架構導覽 / Architecture Exploration
 
-> 產出時間：2026-08-03　對應版本：`dev` 分支（commit `f17e07a`）；2026-10-08 加入 `core/` 並重算各套件規模。
-> 涵蓋範圍：`je_editor/` 全部 339 個 `.py`（210 個實作模組 + 129 個 `__init__.py`），共 39,286 行。
+> 產出時間：2026-08-03　對應版本：`dev` 分支（commit `f17e07a`）；2026-10-08 加入 `core/` 並重算各套件規模；2026-11-15 加入視窗外框（`main_ui/shell/`、`utils/shell/`）與內建主題並再次重算。
+> 涵蓋範圍：`je_editor/` 全部 359 個 `.py`（226 個實作模組 + 133 個 `__init__.py`），共 42,576 行。
 > 這份文件記錄「每個模組負責什麼」與「模組之間怎麼串起來」，不是使用手冊（使用說明見 `README.md`、插件說明見 `PLUGIN_GUIDE.md`）。
 
 ---
@@ -14,25 +14,25 @@ JEditor 是以 PySide6（Qt for Python）寫成的程式碼編輯器，功能涵
 | 項目 | 內容 |
 | --- | --- |
 | 語言 / 版本 | Python 3.11+（CI 測 3.11 ～ 3.14） |
-| UI 框架 | PySide6 6.12.0 + qt-material 主題 |
+| UI 框架 | PySide6 6.12.0；視窗樣式是內建主題（`jeditor_dark` / `jeditor_light`，QSS 由色票組成），qt-material 的樣式仍可選 |
 | 主要相依 | `jedi`（Python 補全）、`ruff`（診斷）、`yapf` / `pycodestyle`（格式化與檢查）、`gitpython`、`watchdog`、`qtconsole` + `IPython`、`langchain_openai` + `langchain_core`、`anthropic`、`tree-sitter` 與三個文法套件（`tree-sitter-python` / `-javascript` / `-json`）、`debugpy`、`frontengine` |
-| 測試 | pytest + pytest-qt，115 個測試檔、約 21,000 行 |
+| 測試 | pytest + pytest-qt，119 個測試檔、約 21,900 行 |
 | 靜態分析 | ruff、SonarCloud（`sonar.sources=je_editor`）、Codacy、bandit |
 
 ### 各套件規模
 
 | 套件 | 模組數 | 行數 | 定位 |
 | --- | ---: | ---: | --- |
-| `pyside_ui/` | 104 | 22,671 | View / Controller：所有 Qt 元件與選單 |
-| `utils/` | 62 | 9,257 | 純邏輯層（絕大多數不 import Qt，可單獨測試） |
-| `adapters/` | 12 | 2,343 | 核心介面的實作（同樣不 import Qt）：AI 供應者、設定檔讀寫、預設服務的組裝 |
-| `core/` | 19 | 3,401 | 核心服務層：工作區、文件、診斷的模型，以及語言服務、除錯、工作執行、遠端、AI 的介面（完全不 import Qt） |
+| `pyside_ui/` | 112 | 24,108 | View / Controller：所有 Qt 元件與選單 |
+| `utils/` | 67 | 10,138 | 純邏輯層（絕大多數不 import Qt，可單獨測試） |
+| `adapters/` | 14 | 3,039 | 核心介面的實作（同樣不 import Qt）：AI 供應者、設定檔讀寫、預設服務的組裝 |
+| `core/` | 20 | 3,681 | 核心服務層：工作區、文件、診斷的模型，以及語言服務、除錯、工作執行、遠端、AI 的介面（完全不 import Qt） |
 | `git_client/` | 6 | 777 | Git 操作（GitPython + git CLI 兩條路） |
 | `code_scan/` | 4 | 368 | ruff 執行與 watchdog 檔案監看 |
 | `plugins/` | 1 | 337 | 插件註冊表與外部插件載入器 |
-| 頂層 | 2 | 131 | `__main__.py`、`start_editor.py`（另有 `__init__.py` 匯出公開 API） |
+| 頂層 | 2 | 128 | `__main__.py`、`start_editor.py`（另有 `__init__.py` 匯出公開 API） |
 
-（行數含各層 `__init__.py`，合計 39,286 行。）
+（行數含各層 `__init__.py`，合計 42,576 行。）
 
 ---
 
@@ -42,10 +42,12 @@ JEditor 是以 PySide6（Qt for Python）寫成的程式碼編輯器，功能涵
                     ┌──────────────────────────────────────────┐
      進入點          │ __main__.py  →  start_editor.py          │
                     └──────────────────┬───────────────────────┘
-                                       │ 建 QApplication、載插件、套主題
+                                       │ 建 QApplication、載插件
                     ┌──────────────────▼───────────────────────┐
      視窗層          │ main_ui/main_editor.py  (EditorMain)     │
-                    │  ├ menu/        選單列（10 個子選單）      │
+                    │  ├ shell/       外框：活動列、側邊欄、下方  │
+                    │  │              面板、第二側邊欄、主題套用  │
+                    │  ├ menu/        選單列（11 個子選單）      │
                     │  ├ toolbar/     工具列 + Git 分支切換      │
                     │  ├ editor/      EditorWidget（分頁本體）   │
                     │  ├ *_panel/     problems / todo / test / outline
@@ -97,14 +99,17 @@ start_editor(debug_mode)                       je_editor/start_editor.py
  │   ├ language_wrapper.reset_language(...)    第一次啟動照系統語系挑
  │   ├ jedi.settings.fast_parser = False       避免執行緒問題
  │   ├ read_user_color_setting()               .jeditor/user_color_setting.json
- │   ├ QTabWidget 建立、set_menu_bar()、build_toolbar()
- │   ├ 狀態列四個標籤（語言 / 行尾 / 編碼 / 游標位置）
+ │   ├ QTabWidget 建立
+ │   ├ Workbench(self, tab_widget)             外框：活動列、側邊欄、下方面板、第二側邊欄；
+ │   │                                         共用的檔案樹與輸出面板在這裡建立，並設為中央元件
+ │   ├ set_menu_bar()、build_toolbar()
+ │   ├ 狀態列：左邊 Git 分支，右邊四個標籤（語言 / 行尾 / 編碼 / 游標位置）
  │   ├ redirect_manager_instance.set_redirect() 接管 stdout / stderr
  │   ├ QTimer 50ms  → redirect()               把佇列內容寫進輸出區
  │   ├ QTimer 60s   → _periodic_save_settings() 防當機丟設定
  │   ├ 加入分頁：EditorWidget、瀏覽器（非 debug）、EDITOR_EXTEND_TAB
- │   └ startup_setting()                       套字型 / 樣式 / 顏色、還原上次分頁
- ├ apply_stylesheet(dark_amber.xml)
+ │   ├ startup_setting()                       套字型 / 樣式（apply_ui_style）/ 顏色、還原上次分頁
+ │   └ workbench.restore_layout()              還原上次的版面（shell_layout）
  ├ window.showMaximized()
  └ app.exec() → os._exit(ret)
 ```
@@ -119,7 +124,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 物件 | 位置 | 用途 |
 | --- | --- | --- |
-| `user_setting_dict` | `main_ui/save_settings/user_setting_file.py` | 字型、語言、樣式、縮排、最近檔案、開啟分頁、快捷鍵覆寫 |
+| `user_setting_dict` | `main_ui/save_settings/user_setting_file.py` | 字型、語言、樣式、縮排、最近檔案、開啟分頁、快捷鍵覆寫、外框版面（`shell_layout`） |
 | `user_setting_color_dict` / `actually_color_dict` | `main_ui/save_settings/user_color_setting_file.py` | 使用者顏色設定（RGB list）與換算後的 `QColor` |
 | `language_wrapper` | `utils/multi_language/multi_language_wrapper.py` | 目前語言的字典，所有介面文字都從這裡取 |
 | `redirect_manager_instance` | `utils/redirect_manager/redirect_manager_class.py` | stdout / stderr 兩個 `queue.Queue` |
@@ -128,6 +133,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `auto_save_manager_dict` / `file_is_open_manager_dict` | `pyside_ui/code/auto_save/auto_save_manager.py` | 自動儲存執行緒表、避免同檔重複開分頁 |
 | `syntax_rule_setting_dict` 等三個 | `pyside_ui/code/syntax/syntax_setting.py` | Python 高亮的規則、關鍵字與插件擴充位 |
 | `shared_syntax_engine()` | `adapters/syntax/tree_sitter_engine.py` | 整個行程共用的語法引擎（第一次呼叫時才建立）。裡面只有載入好的文法與編譯好的查詢，都是不會變的資料；每份文件自己的語法樹在 session 裡，不在這裡 |
+| `_image_directory` | `main_ui/shell/ui_style.py` | 內建主題的 QSS 用到的圖檔（分頁關閉鈕）所在的暫存資料夾；第一次套用內建主題時建立，行程結束時由 `atexit` 刪掉 |
 | `EDITOR_EXTEND_TAB` | `main_ui/main_editor.py` | 給下游專案（PyBreeze）塞自訂分頁的掛載點 |
 | `_plugin_metadata_list` 等 | `plugins/__init__.py` | 已註冊的語言 / 翻譯 / 執行設定 / 中繼資料 |
 
@@ -144,11 +150,11 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | --- | ---: | --- |
 | `__init__.py` | 58 | 公開 API 匯總（`__all__`）：`start_editor`、`EditorMain`、`EditorWidget`、例外類別、語言字典、插件註冊函式 |
 | `__main__.py` | 18 | `python -m je_editor -s` 的 argparse 進入點 |
-| `start_editor.py` | 56 | 建 `QApplication`、載插件、套 qt-material 主題、最大化顯示、`os._exit` 收場 |
+| `start_editor.py` | 52 | 建 `QApplication`、載插件、最大化顯示、`os._exit` 收場；樣式由主視窗依設定套用，這裡不再蓋上 `dark_amber` |
 
 ---
 
-### 5.2 `utils/` — 純邏輯層（62 模組 / 9,257 行）
+### 5.2 `utils/` — 純邏輯層（67 模組 / 10,138 行）
 
 #### 文字與行操作
 
@@ -220,18 +226,23 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `macro/keystroke_macro.py` | 89 | 按鍵巨集的錄製與重播狀態（上限 2000 鍵） |
 | `command_palette/fuzzy_matcher.py` | 174 | 模糊比對評分（連續 / 詞界 / 前綴 / 子字串加分，長度與前導罰分）與排序 |
 | `minimap/minimap_layout.py` | 112 | 縮圖座標換算：取樣間隔、行↔像素、長條寬度、可視範圍方框 |
-| `shortcuts/shortcut_registry.py` | 329 | 快捷鍵正規化、`ShortcutRegistry` 衝突偵測、預設表 `WINDOW_SHORTCUTS` / `EDITOR_SHORTCUTS`、使用者覆寫清理 |
+| `shortcuts/shortcut_registry.py` | 334 | 快捷鍵正規化、`ShortcutRegistry` 衝突偵測、預設表 `WINDOW_SHORTCUTS` / `EDITOR_SHORTCUTS`、使用者覆寫清理 |
 | `status/status_text.py` | 71 | 狀態列文字：語言名稱、編碼、行尾、游標位置 |
-| `theme/theme_colors.py` | 139 | 深 / 淺色調色盤，換主題時保留使用者自訂的顏色 |
+| `theme/theme_colors.py` | 175 | 編輯器自己畫的顏色：qt-material 用的深 / 淺兩組，加上內建主題各一組（行號區與目前行貼著編輯區底色）；換主題時保留使用者自訂的顏色 |
+| `theme/ui_theme.py` | 163 | 內建視窗主題的色票（`DARK_TOKENS` / `LIGHT_TOKENS`）與樣式名稱的判斷：`is_builtin_style()`、`is_light_style()`、`tokens_for()`、樣式選單要列的 `style_choices()`、預設樣式 `DEFAULT_STYLE` |
+| `theme/ui_stylesheet.py` | 233 | `build_stylesheet(tokens, image_urls)`：一份 QSS 範本，深淺只差代進去的色票；外框元件的物件名稱（`ActivityBar`、`SideBar`…）也定義在這裡，元件與樣式共用 |
+| `theme/ui_icons.py` | 122 | 外框與工具列的線條圖示，以 SVG 文字存放（不必另外打包），顏色是代進去的：`icon_svg(name, color, size)` |
+| `shell/shell_views.py` | 114 | 外框有哪些面板、各在哪一區：`ViewSpec`、`BUILTIN_VIEWS`、三個區域（`side` / `bottom` / `secondary`）與面板 ID 常數 |
+| `shell/layout_state.py` | 132 | 外框的版面狀態 `ShellLayout`（哪些區域開著、顯示哪個面板、多寬）與它在設定檔裡的讀寫：壞掉的值逐欄退回預設、指向不存在面板的欄位換回預設面板 |
 
 #### 多語系
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
-| `multi_language/english.py` | 547 | 英文字典（其他語言以此為鍵值基準） |
-| `multi_language/traditional_chinese.py` | 537 | 繁體中文字典 |
-| `multi_language/simplified_chinese.py` | 537 | 簡體中文字典 |
-| `multi_language/japanese.py` | 541 | 日文字典 |
+| `multi_language/english.py` | 566 | 英文字典（其他語言以此為鍵值基準） |
+| `multi_language/traditional_chinese.py` | 556 | 繁體中文字典 |
+| `multi_language/simplified_chinese.py` | 556 | 簡體中文字典 |
+| `multi_language/japanese.py` | 560 | 日文字典 |
 | `multi_language/multi_language_wrapper.py` | 150 | `LanguageWrapper` 單例：註冊語言、切換、啟動語言決策 |
 | `multi_language/locale_match.py` | 116 | 系統語系 → 編輯器語言（含中文繁簡判定） |
 | `multi_language/retranslate_text.py` | 154 | 反查「這段文字是哪個鍵翻出來的」，用於換語言時就地換字 |
@@ -317,26 +328,45 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
-| `main_editor.py` | 656 | `EditorMain(QMainWindow)`：分頁容器、輸出重導計時器、狀態列更新、設定定期儲存、工作階段還原 / 儲存、關閉時收尾；`EDITOR_EXTEND_TAB` 掛載點 |
-| `editor/editor_widget.py` | 613 | `EditorWidget`：一個編輯分頁＝左側專案樹 + 上方 `CodeEditor` + 下方輸出分頁（執行結果 / 格式檢查 / 除錯 / 終端機 / 變數檢視 / Git），含拖放開檔、外部變更偵測、縮圖與分割檢視切換。所有開檔都經 `open_an_file()`：讀不了時 `report_open_failure()` 告訴使用者並撤掉「已開啟」紀錄；外部變更後重新載入用檔案自己的編碼 |
+| `main_editor.py` | 682 | `EditorMain(QMainWindow)`：建立外框（`self.workbench`）與分頁容器、輸出重導計時器、狀態列更新、設定定期儲存、工作階段還原 / 儲存、關閉時收尾；`EDITOR_EXTEND_TAB` 掛載點 |
+| `editor/editor_widget.py` | 578 | `EditorWidget`：一個編輯分頁。視窗有外框時分頁裡只有 `CodeEditor`，檔案樹與輸出面板是視窗共用的那一組，`project_treeview`、`code_result`、`git_gui`、`code_difference_result` 等屬性只是指向它們；沒有外框的宿主視窗裡仍是「左側專案樹 + 上方 `CodeEditor` + 下方輸出分頁」，自己建一組。分頁標題是檔名，完整路徑在提示與物件名稱裡。含拖放開檔、外部變更偵測、縮圖與分割檢視切換。所有開檔都經 `open_an_file()`：讀不了時 `report_open_failure()` 告訴使用者並撤掉「已開啟」紀錄；外部變更後重新載入用檔案自己的編碼 |
 | `editor/editor_widget_dock.py` | 85 | `FullEditorWidget`：可停駐的單檔編輯器；關閉時只在有修改時，以檔案原本的編碼與行尾存回 |
 | `editor/process_input.py` | 104 | 對子程序（program / shell / debugger）送入標準輸入的視窗 |
 | `dock/destroy_dock.py` | 52 | `DestroyDock`：關閉時會真的銷毀內容的 `QDockWidget` |
 | `system_tray/extend_system_tray.py` | 88 | 系統匣圖示與隱藏 / 還原 / 關閉選項 |
-| `toolbar/toolbar_builder.py` | 485 | 工具列：新增 / 開啟 / 儲存 / 執行 / 除錯 / 停止 / 搜尋 / 指令面板 / 快速開啟 / 前往符號，以及 Git 分支標籤與切換（`_GitBranchScan`、`_GitCheckout` 兩個 QThread，走 git CLI） |
-| `retranslate.py` | 267 | 換語言後就地重新標示選單列、工具列、分頁標題與 dock（用 `retranslate_text` 反查鍵） |
+| `toolbar/toolbar_builder.py` | 476 | 工具列（圖示來自 `shell_icons`，分支掃描的結果同時送到狀態列）：新增 / 開啟 / 儲存 / 執行 / 除錯 / 停止 / 搜尋 / 指令面板 / 快速開啟 / 前往符號，以及 Git 分支標籤與切換（`_GitBranchScan`、`_GitCheckout` 兩個 QThread，走 git CLI） |
+| `retranslate.py` | 271 | 換語言後就地重新標示選單列、工具列、分頁標題、dock 與外框（`workbench.retranslate()`）（用 `retranslate_text` 反查鍵） |
+
+#### 外框（`shell/`）
+
+視窗分成四區：左邊的側邊欄、中間的編輯分頁、下方的面板、右邊的第二側邊欄，最左邊是活動列。
+版面狀態（`utils/shell/layout_state.py`）與面板內容分開：收起一區或換面板不會重建面板。
+
+| 模組 | 行 | 功用 |
+| --- | ---: | --- |
+| `shell/workbench.py` | 619 | `Workbench(QObject)`：建立兩層分隔器並設為中央元件、登記面板（`register_view(spec, factory | widget)`，宿主程式與外掛也用它）、顯示 / 切換（`show_view`、`toggle_view`、三個區域的開關）、版面的取得 / 套用 / 存入設定 / 還原、從檔案樹開檔（空白分頁就地開，否則開新分頁）、換語言、關閉時讓每個面板收尾。`workbench_of(window)` 與 `reveal_view(window, view_id)` 讓其他模組不必知道面板在哪一區 |
+| `shell/activity_bar.py` | 112 | `ActivityBar(QToolBar)`：不能移動的直式工具列，每個側邊欄面板一個可勾選的圖示，第二側邊欄的排在最下面 |
+| `shell/view_container.py` | 188 | `ViewContainer`（標題 + 一疊面板）與 `LazyPage`：面板第一次顯示時才呼叫工廠函式建立，並包在可捲動區域裡；建立失敗只留下空頁 |
+| `shell/explorer_panel.py` | 97 | `ExplorerPanel`：工作區的檔案樹（只顯示名稱欄）與多根目錄時的選單；整個視窗共用一份 |
+| `shell/output_panels.py` | 67 | `OutputPanels`：執行結果、格式檢查、除錯輸出、終端機、變數檢視器、Git 用戶端這一組元件；外框建一組，沒有外框的編輯分頁自己建一組 |
+| `shell/shell_icons.py` | 120 | 把 `ui_icons` 的 SVG 畫成 `QIcon`（一般 / 滑過 / 選取 / 停用各一色，1x 與 2x）；`set_action_icon()` 在動作上記下圖示名稱，`refresh_action_icons()` 換主題時重畫 |
+| `shell/ui_style.py` | 157 | `apply_ui_style(window, style_name)`：內建主題走 Fusion + 調色盤 + QSS（分頁關閉鈕的圖檔寫到暫存資料夾），其餘名稱交給 qt-material；套用後重畫圖示 |
+
+內建面板：側邊欄有檔案總管、大綱、執行與除錯、測試、待辦事項；下方面板有輸出、問題、終端機、
+原始檔控制（Git 用戶端是並排的介面，側邊欄放不下）、除錯主控台、格式檢查、變數；第二側邊欄是 AI 聊天。
+檔案總管與輸出類的面板在視窗建立時就有，其餘等到第一次顯示才建立。
 
 #### 選單（`menu/`）
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
-| `set_menu_bar.py` | 69 | 依序組裝 10 個子選單；extend 模式不建插件選單 |
+| `set_menu_bar.py` | 71 | 依序組裝 11 個子選單；extend 模式不建插件選單 |
 | `file_menu/build_file_menu.py` | 316 | 檔案選單：開 / 存 / 另存、最近檔案（上限 10）、編碼、行尾、字型與大小 |
 | `file_menu/encoding_actions.py` | 186 | 實際套用編碼 / 行尾、存檔前格式化、儲存所有分頁（一個分頁存不了，其他照存並回報） |
 | `run_menu/build_run_menu.py` | 155 | 執行選單骨架、停止程式、清除輸出、說明 |
-| `run_menu/under_run_menu/build_program_menu.py` | 108 | 執行使用者程式（解析插件 run_config） |
+| `run_menu/under_run_menu/build_program_menu.py` | 113 | 執行使用者程式（解析插件 run_config），執行前把輸出面板顯示出來 |
 | `run_menu/under_run_menu/build_shell_menu.py` | 98 | 執行 shell 指令 |
-| `run_menu/under_run_menu/build_debug_menu.py` | 163 | 啟動 pdb、送出中斷點、除錯輸入視窗 |
+| `run_menu/under_run_menu/build_debug_menu.py` | 166 | 啟動 pdb、送出中斷點、除錯輸入視窗 |
 | `run_menu/under_run_menu/utils.py` | 41 | 「請先關掉正在執行的程式」訊息框 |
 | `text_menu/build_text_menu.py` | 421 | 文字選單：統計、去行尾空白、縮排轉換、自動換行、縮排大小、字型；大量動作轉呼叫 `CodeEditor` 的方法 |
 | `check_style_menu/build_check_style_menu.py` | 127 | yapf 格式化、JSON 排版、PEP8 檢查、存檔時自動格式化開關 |
@@ -344,7 +374,8 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `tab_menu/build_tab_git_menu.py` | 200 | Git 分頁：HEAD diff、staged diff、Git 用戶端、提交圖、diff 比對 |
 | `tab_menu/build_tab_tools_menu.py` | 155 | 工具分頁：IPython、變數檢視器、FrontEngine、AI 對話、TODO 面板、大綱面板 |
 | `dock_menu/build_dock_menu.py` | 253 | 各種 dock 視窗的建立（含 FrontEngine 元件） |
-| `style_menu/build_style_menu.py` | 179 | qt-material 樣式切換、縮排參考線 / 尾端空白開關、開啟快捷鍵設定 |
+| `view_menu/build_view_menu.py` | 72 | 檢視選單：開關側邊欄 / 下方面板 / 第二側邊欄，以及每個內建面板一個「顯示」項目；全部只是呼叫 `Workbench` 的方法 |
+| `style_menu/build_style_menu.py` | 182 | 樣式切換（內建主題在前，接著是 qt-material 的樣式；樣式名稱放在動作的 data）、縮排參考線 / 尾端空白開關、開啟快捷鍵設定 |
 | `language_menu/build_language_server.py` | 96 | 介面語言切換（含插件註冊的語言） |
 | `python_env_menu/build_venv_menu.py` | 243 | 建立 venv、pip 安裝 / 升級、選擇直譯器 |
 | `plugin_menu/build_plugin_menu.py` | 162 | 依已註冊插件建立「關於 / 執行」子選單，並開啟插件瀏覽器 |
@@ -376,7 +407,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
-| `user_setting_file.py` | 70 | `user_setting_dict` 的定義與 `.jeditor/user_setting.json` 讀寫 |
+| `user_setting_file.py` | 77 | `user_setting_dict` 的定義與 `.jeditor/user_setting.json` 讀寫 |
 | `user_color_setting_file.py` | 96 | 顏色設定讀寫、RGB → `QColor` 換算、依樣式套用深 / 淺色組 |
 | `setting_utils.py` | 40 | 寫入前先備份（`.bak`）的 JSON 寫檔工具 |
 
@@ -386,7 +417,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | --- | ---: | --- |
 | `debug_panel/debug_controller.py` | 241 | `DebugController(QObject)`：視窗這一端的除錯控制。向 `services.debug_adapters` 要一個工作階段、訂閱它的事件，把事件與查詢的回覆變成 Qt 訊號（工作階段在自己的執行緒上回覆，訊號跨執行緒時由 Qt 排進畫面執行緒）；給工具看的 `telemetry` 輸出不往外送 |
 | `debug_panel/debug_panel_widget.py` | 325 | `DebugPanelWidget`：控制按鈕與狀態、執行緒、呼叫堆疊、變數樹（展開時才查子項目）、輸出與求值。只認 `DebugController`；清空堆疊清單時擋住訊號，Qt 途中移動的「目前項目」才不會被當成使用者選的 |
-| `debug_panel/debug_actions.py` | 219 | 選單、工具列與快捷鍵呼叫的動作：`start_debugging()`、`attach_to_process()`、`edit_breakpoint_condition()`、`show_execution_line()` / `clear_execution_lines()`、`show_debug_panel()`；`controller_of()` 在視窗沒有控制器或轉接器沒登記時回傳 `None`，呼叫端據此退回 pdb 主控台 |
+| `debug_panel/debug_actions.py` | 224 | 選單、工具列與快捷鍵呼叫的動作：`start_debugging()`、`attach_to_process()`、`edit_breakpoint_condition()`、`show_execution_line()` / `clear_execution_lines()`、`show_debug_panel()`（視窗有外框時顯示側邊欄的除錯面板，沒有才開 dock）；`controller_of()` 在視窗沒有控制器或轉接器沒登記時回傳 `None`，呼叫端據此退回 pdb 主控台 |
 
 #### 工作區（`workspace/`）
 
@@ -519,7 +550,7 @@ UI 執行緒不做 I/O 是硬性規則，重活分成三類：
 
 | 檔案 | 內容 |
 | --- | --- |
-| `user_setting.json` | 字型、語言、樣式、編碼、縮排、最近檔案、開啟分頁與其游標 / 書籤 / 折疊狀態、快捷鍵覆寫、另外加入工作區的資料夾（`workspace_roots`）、語法高亮用哪個引擎（`syntax_engine`） |
+| `user_setting.json` | 字型、語言、樣式、編碼、縮排、最近檔案、開啟分頁與其游標 / 書籤 / 折疊狀態、快捷鍵覆寫、另外加入工作區的資料夾（`workspace_roots`）、語法高亮用哪個引擎（`syntax_engine`）、外框的版面（`shell_layout`：哪些區域開著、顯示哪個面板、多寬） |
 | `user_color_setting.json` | 編輯器自訂顏色 |
 | `snippets.json` | 使用者程式碼片段 |
 | `*.bak` | 每次寫入前的備份（`setting_utils.write_setting`） |
@@ -545,8 +576,12 @@ UI 執行緒不做 I/O 是硬性規則，重活分成三類：
 
 ### 6.5 主題顏色
 
-qt-material 負責視窗樣式；編輯器自身的顏色（語法高亮、diff 標記、診斷底線、輸出顏色）由
-`utils/theme/theme_colors.py` 提供深 / 淺兩組預設，換樣式時 `apply_theme_colors` 會換掉預設色但保留使用者挑過的顏色，
+視窗樣式由設定的 `ui_style` 決定，一律經 `main_ui/shell/ui_style.apply_ui_style()` 套用：
+`jeditor_dark`（預設）與 `jeditor_light` 是內建主題，QSS 由 `utils/theme/ui_stylesheet.build_stylesheet()`
+把 `ui_theme` 的色票代進同一份範本而成；其餘名稱（`dark_amber.xml` 這一類）交給 qt-material。
+圖示（`ui_icons` 的 SVG）照色票上色，換樣式時重畫；qt-material 的樣式借用明暗相同的那一組色票。
+編輯器自身的顏色（語法高亮、diff 標記、診斷底線、輸出顏色）由
+`utils/theme/theme_colors.py` 提供預設（qt-material 用的深 / 淺兩組，內建主題各一組），換樣式時 `apply_theme_colors` 會換掉預設色但保留使用者挑過的顏色，
 換算結果放在 `actually_color_dict`。
 
 `update_actually_color_dict` 的鍵與備用值直接取自 `DARK_COLORS`，所以調色盤加新顏色不必動它。
@@ -573,12 +608,15 @@ Qt 的高亮器重畫時會送出 `textChanged`（不是 `contentsChange`），�
 
 `EditorMain(extend=True)` 讓下游專案（PyBreeze）沿用整個編輯器但自建插件選單與應用程式識別；
 `EDITOR_EXTEND_TAB` 則讓下游在啟動時塞入自訂分頁。這是 JEditor 作為函式庫被重用的主要接口。
+外框在 extend 模式下照樣建立；下游用 `window.workbench.register_view(ViewSpec(...), factory)` 把自己的面板
+放進側邊欄、下方面板或第二側邊欄，活動列與停駐區互不相干（活動列是工具列），所以下游停在左邊的 dock 會排在
+活動列與側邊欄之間。
 
 ---
 
 ## 7. 測試與 CI
 
-- `test/` 115 個測試檔、約 21,000 行，與模組大致一對一（`test_fold_regions.py`、`test_shortcut_registry.py`…）。
+- `test/` 119 個測試檔、約 21,900 行，與模組大致一對一（`test_fold_regions.py`、`test_shortcut_registry.py`…）。
 - `core/` 的測試是 `test_core_*.py` 七個檔。其中 `test_core_architecture.py` 守分層：以 `ast` 走訪 `core/` 的
   匯入關係（函式內的匯入也算）、列出 UI 層以下允許向上匯入的模組，並在子行程裡擋掉 Qt 的匯入後實際建立
   `EditorServices`。`test_public_api_contract.py` 釘住 `je_editor.__all__` 的既有名稱、PyBreeze 以模組路徑匯入的

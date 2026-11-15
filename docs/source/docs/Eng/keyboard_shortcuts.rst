@@ -201,6 +201,14 @@ Macros and View
      - Toggle the split view
    * - ``Ctrl+Alt+M``
      - Toggle the minimap
+   * - ``Ctrl+Shift+B``
+     - Toggle the side bar
+   * - ``Ctrl+```
+     - Toggle the bottom panel
+   * - ``Ctrl+Alt+I``
+     - Toggle the secondary side bar (AI chat)
+   * - ``Ctrl+Shift+E``
+     - Show the Explorer
    * - ``Alt+W``
      - Toggle word wrap
    * - ``Ctrl++`` or ``Ctrl+=`` / ``Ctrl+-``

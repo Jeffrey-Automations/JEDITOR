@@ -188,6 +188,11 @@ WINDOW_SHORTCUTS: Dict[str, str] = {
     # 分頁選單 / Tab menu
     "toggle_split_view": "Ctrl+Alt+\\",
     "toggle_minimap": "Ctrl+Alt+M",
+    # 檢視選單：外框的各區 / View menu: the shell's areas
+    "toggle_side_bar": "Ctrl+Shift+B",
+    "toggle_bottom_panel": "Ctrl+`",
+    "toggle_secondary_side_bar": "Ctrl+Alt+I",
+    "show_explorer": "Ctrl+Shift+E",
 }
 
 # 編輯器自己的指令 / The editor's own commands

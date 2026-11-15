@@ -3,7 +3,6 @@ import sys
 
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
-from qt_material import apply_stylesheet
 
 from je_editor.pyside_ui.main_ui.main_editor import EditorMain
 from je_editor.plugins.plugin_loader import load_external_plugins
@@ -13,8 +12,9 @@ from je_editor.utils.browser.chromium_flags import quiet_chromium_logging
 def start_editor(debug_mode: bool = False) -> None:
     """
     功能說明 (Function Description):
-    啟動編輯器主程式，建立 QApplication 實例，套用主題，並顯示主視窗。
-    Start the main editor application, create QApplication instance, apply theme, and show main window.
+    啟動編輯器主程式，建立 QApplication 實例，並顯示主視窗；主題由主視窗依使用者設定套用。
+    Start the main editor application, create QApplication instance, and show main window;
+    the main window applies the theme the user settings name.
 
     :param debug_mode: 是否啟用除錯模式 / whether to enable debug mode
     """
@@ -41,10 +41,6 @@ def start_editor(debug_mode: bool = False) -> None:
     # 建立主視窗，傳入 debug_mode
     # Create the main editor window, passing debug_mode
     window = EditorMain(debug_mode)
-
-    # 套用 qt-material 主題 (dark amber)
-    # Apply qt-material theme (dark amber)
-    apply_stylesheet(new_editor, theme='dark_amber.xml')
 
     # 最大化顯示主視窗
     # Show the main window maximized

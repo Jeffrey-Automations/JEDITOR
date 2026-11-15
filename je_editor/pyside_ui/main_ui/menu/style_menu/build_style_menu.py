@@ -6,12 +6,13 @@ from typing import TYPE_CHECKING
 # Import QAction
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QApplication
 
 # 匯入使用者設定字典，用來保存 UI 樣式設定
 # Import user settings dictionary for saving UI style preferences
 from je_editor.pyside_ui.main_ui.save_settings.user_color_setting_file import apply_theme_colors
 from je_editor.pyside_ui.main_ui.save_settings.user_setting_file import user_setting_dict
+from je_editor.pyside_ui.main_ui.shell.ui_style import apply_ui_style
+from je_editor.utils.theme.ui_theme import style_choices
 # 匯入日誌紀錄器
 # Import logger instance
 from je_editor.utils.logging.loggin_instance import jeditor_logger
@@ -37,17 +38,14 @@ def set_style_menu(ui_we_want_to_set: EditorMain) -> None:
         language_wrapper.language_word_dict.get("style_menu_label")
     )
 
-    # 預設提供的樣式清單 (深色/淺色不同配色)
-    # Predefined style list (dark/light themes with different colors)
-    for style in [
-        'dark_amber.xml', 'dark_blue.xml', 'dark_cyan.xml', 'dark_lightgreen.xml',
-        'dark_pink.xml', 'dark_purple.xml', 'dark_red.xml', 'dark_teal.xml',
-        'dark_yellow.xml', 'light_amber.xml', 'light_blue.xml', 'light_cyan.xml',
-        'light_cyan_500.xml', 'light_lightgreen.xml', 'light_pink.xml', 'light_purple.xml'
-    ]:
-        # 建立一個 QAction，名稱為樣式檔名
-        # Create an QAction with the style filename as label
-        change_style_action = QAction(style, parent=ui_we_want_to_set.menu.style_menu)
+    # 可選的樣式：內建主題在前，接著是 qt-material 的樣式檔
+    # The styles on offer: the built-in themes first, then the qt-material files
+    for style, label in style_choices():
+        # 顯示名稱給人看，樣式名稱放在 data 裡，套用與儲存都用它
+        # The label is for reading; the style's name rides in the data, and that
+        # is what gets applied and stored
+        change_style_action = QAction(label, parent=ui_we_want_to_set.menu.style_menu)
+        change_style_action.setData(style)
 
         # 綁定觸發事件，呼叫 set_style 來套用樣式
         # Connect action to set_style function
@@ -124,20 +122,25 @@ def set_style(ui_we_want_to_set: EditorMain, action: QAction) -> None:
                         f"ui_we_want_to_set: {ui_we_want_to_set} "
                         f"action: {action}")
 
-    # 呼叫主視窗的 apply_stylesheet 方法，套用選擇的樣式
-    # Call main window's apply_stylesheet method to apply the chosen style
-    app = QApplication.instance()
-    if app is not None:
-        ui_we_want_to_set.apply_stylesheet(app, action.text())
+    # 樣式名稱在 data 裡；沒有 data 的動作（宿主程式自己加的）以文字為名
+    # The style's name is in the data; an action without any, as a host
+    # application might add, is named by its text
+    style_name = str(action.data() or action.text())
 
-    # 更新使用者設定，保存目前選擇的樣式
-    # Update user settings dictionary to persist the chosen style
-    user_setting_dict.update({"ui_style": action.text()})
+    # 更新使用者設定，保存目前選擇的樣式；要在套用之前，圖示重畫時讀的就是這個設定
+    # Update user settings dictionary to persist the chosen style. This comes
+    # before applying it: redrawing the icons reads this very setting
+    user_setting_dict.update({"ui_style": style_name})
+    apply_ui_style(ui_we_want_to_set, style_name)
 
     # 編輯器自己畫的顏色也要跟著換，否則淺色樣式配深色底調出來的標記會看不清楚
     # The colours the editor paints itself follow along, or a light style would
     # be left with markers tuned for a dark background
-    apply_theme_colors(action.text())
+    apply_theme_colors(style_name)
+    refresh_branch = getattr(ui_we_want_to_set, "set_status_branch", None)
+    label = getattr(ui_we_want_to_set, "status_branch_label", None)
+    if callable(refresh_branch) and label is not None:
+        refresh_branch(label.text())
     _repaint_editors(ui_we_want_to_set)
 
 
