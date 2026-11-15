@@ -82,7 +82,12 @@ def register_natural_language(
     # 同步到 LanguageWrapper，讓語言切換生效
     # Sync to LanguageWrapper so language switching works
     from je_editor.utils.multi_language.multi_language_wrapper import language_wrapper
-    language_wrapper.choose_language_dict[language_key] = word_dict
+    # 連顯示名稱一起登記：只寫字典的話，語言選單列出來的是鍵（French）而不是它自己
+    # 的名字（Français）
+    # The display name is registered with it: writing the dictionary alone left
+    # the Language menu listing the key (French) instead of the language's own
+    # name (Français)
+    language_wrapper.register_language(language_key, word_dict, display_name)
 
 
 def get_natural_language_plugin(language_key: str) -> dict | None:

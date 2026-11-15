@@ -513,3 +513,116 @@ class TestChoosingAStyleFromTheMenu:
         set_style(window, action)
         assert user_setting_dict["ui_style"] == STYLE_LIGHT
         assert LIGHT_TOKENS["editor_background"] in qapp.styleSheet()
+
+
+SAVE_DIALOG = "je_editor.pyside_ui.dialog.file_dialog.save_file_dialog"
+OPEN_DIALOG = "je_editor.pyside_ui.dialog.file_dialog.open_file_dialog"
+
+
+class TestSavingTheTabInFront:
+    """Save File, Run and Debug used to open the Save As dialog every time."""
+
+    def test_a_tab_with_a_file_is_written_where_it_is(self, window, editor_tab, tmp_dir):
+        from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
+        target = tmp_dir / "main.py"
+        target.write_text("x = 1\n", encoding="utf-8")
+        editor_tab.open_an_file(target)
+        editor_tab.code_edit.setPlainText("x = 2\n")
+        with patch(f"{SAVE_DIALOG}.QFileDialog") as dialog:
+            assert save_current_file(window) is True
+        dialog.assert_not_called()
+        assert target.read_text(encoding="utf-8") == "x = 2\n"
+        assert editor_tab._is_modified is False
+
+    def test_a_tab_without_a_file_is_asked_where(self, window, editor_tab, tmp_dir):
+        from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
+        target = tmp_dir / "new.py"
+        editor_tab.code_edit.setPlainText("y = 1\n")
+        with patch(f"{SAVE_DIALOG}.QFileDialog") as dialog:
+            dialog.return_value.getSaveFileName.return_value = (str(target), "")
+            assert save_current_file(window) is True
+        assert target.read_text(encoding="utf-8") == "y = 1\n"
+        assert Path(editor_tab.current_file) == target
+
+    def test_cancelling_the_question_saves_nothing(self, window, editor_tab):
+        from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
+        with patch(f"{SAVE_DIALOG}.QFileDialog") as dialog:
+            dialog.return_value.getSaveFileName.return_value = ("", "")
+            assert save_current_file(window) is False
+
+    def test_a_tab_that_is_no_editor_is_not_saved(self, window):
+        from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
+        window.tab_widget.addTab(QLabel("browser"), "Browser")
+        assert save_current_file(window) is False
+
+
+class TestOpeningAFileFromTheMenu:
+    """File > Open File used to replace the text of the tab in front without asking."""
+
+    def test_it_opens_in_its_own_tab_and_leaves_the_tab_in_front_alone(
+            self, window, editor_tab, tmp_dir):
+        from je_editor.pyside_ui.dialog.file_dialog.open_file_dialog import _open_in_a_tab
+        editor_tab.code_edit.setPlainText("unsaved work")
+        target = tmp_dir / "other.py"
+        target.write_text("z = 1\n", encoding="utf-8")
+        with patch(f"{OPEN_DIALOG}._prompt_for_file", return_value=str(target)):
+            _open_in_a_tab(window)
+        window.go_to_new_tab.assert_called_once_with(target)
+        assert editor_tab.code_edit.toPlainText() == "unsaved work"
+
+    def test_a_blank_tab_takes_the_file(self, window, editor_tab, tmp_dir):
+        from je_editor.pyside_ui.dialog.file_dialog.open_file_dialog import _open_in_a_tab
+        target = tmp_dir / "other.py"
+        target.write_text("z = 1\n", encoding="utf-8")
+        with patch(f"{OPEN_DIALOG}._prompt_for_file", return_value=str(target)):
+            opened = _open_in_a_tab(window)
+        assert opened is editor_tab
+        assert editor_tab.code_edit.toPlainText() == "z = 1\n"
+
+    def test_cancelling_opens_nothing(self, window, editor_tab):
+        from je_editor.pyside_ui.dialog.file_dialog.open_file_dialog import _open_in_a_tab
+        with patch(f"{OPEN_DIALOG}._prompt_for_file", return_value=""):
+            assert _open_in_a_tab(window) is None
+        window.go_to_new_tab.assert_not_called()
+
+
+class TestTheEditorsOwnWrite:
+    """
+    One write raises the file watcher twice on Windows, and the second used to
+    ask whether to reload a file "modified externally" after an auto-save.
+    """
+
+    def _opened(self, editor_tab, tmp_dir):
+        target = tmp_dir / "main.py"
+        target.write_text("x = 1\n", encoding="utf-8")
+        editor_tab.open_an_file(target)
+        return target
+
+    def test_a_file_holding_the_editors_text_asks_nothing(self, editor_tab, tmp_dir):
+        target = self._opened(editor_tab, tmp_dir)
+        with patch("je_editor.pyside_ui.main_ui.editor.editor_widget.QMessageBox.question") as asked:
+            editor_tab._on_file_changed_externally(str(target))
+            editor_tab._on_file_changed_externally(str(target))
+        asked.assert_not_called()
+
+    def test_another_programs_change_is_still_asked_about(self, editor_tab, tmp_dir):
+        from PySide6.QtWidgets import QMessageBox
+        target = self._opened(editor_tab, tmp_dir)
+        # The handler is called by hand below; the real watcher would call it
+        # again later, outside the patch, and open the real question.
+        editor_tab._file_watcher.blockSignals(True)
+        target.write_text("x = 99\n", encoding="utf-8")
+        with patch("je_editor.pyside_ui.main_ui.editor.editor_widget.QMessageBox.question",
+                   return_value=QMessageBox.StandardButton.No) as asked:
+            editor_tab._on_file_changed_externally(str(target))
+        asked.assert_called_once()
+        assert editor_tab.code_edit.toPlainText() == "x = 1\n"
+
+
+@pytest.mark.usefixtures("_style_untouched")
+class TestASavedStyleThatIsNoName:
+    @pytest.mark.parametrize("saved", [42, ["dark"], "", "   ", None])
+    def test_it_falls_back_to_the_default_theme(self, qapp, saved):
+        # A number in the settings file used to raise TypeError out of the window's constructor.
+        assert apply_ui_style(None, saved) is True
+        assert DARK_TOKENS["editor_background"] in qapp.styleSheet()

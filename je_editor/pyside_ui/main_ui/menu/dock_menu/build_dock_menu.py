@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog
-from frontengine import FrontEngineMainUI  # 外部模組 FrontEngine 的主 UI / External FrontEngine main UI
 
 from je_editor.pyside_ui.browser.main_browser_widget import MainBrowserWidget
 from je_editor.pyside_ui.code.variable_inspector.inspector_gui import VariableInspector
@@ -14,12 +13,11 @@ from je_editor.pyside_ui.code.variable_inspector.inspector_gui import VariableIn
 from je_editor.pyside_ui.git_ui.code_diff_compare.code_diff_viewer_widget import DiffViewerWidget
 from je_editor.pyside_ui.git_ui.git_client.git_branch_tree_widget import GitTreeViewGUI
 from je_editor.pyside_ui.git_ui.git_client.git_client_gui import GitGui
-from je_editor.pyside_ui.main_ui.ai_widget.chat_ui import ChatUI
 from je_editor.pyside_ui.main_ui.console_widget.console_gui import ConsoleWidget
 from je_editor.pyside_ui.main_ui.dock.destroy_dock import DestroyDock
 from je_editor.pyside_ui.main_ui.editor.editor_widget import report_open_failure
 from je_editor.pyside_ui.main_ui.editor.editor_widget_dock import FullEditorWidget
-from je_editor.pyside_ui.main_ui.ipython_widget.ipython_console import IpythonWidget
+from je_editor.pyside_ui.main_ui.menu.lazy_widgets import chat_ui, frontengine_ui, ipython_widget
 from je_editor.pyside_ui.main_ui.outline_panel.outline_panel_widget import OutlinePanelWidget
 from je_editor.pyside_ui.main_ui.problems_panel.problems_panel_widget import ProblemsPanelWidget
 from je_editor.pyside_ui.main_ui.debug_panel.debug_actions import DOCK_NAME as DEBUG_DOCK
@@ -207,9 +205,9 @@ def _make_editor_dock(ui_we_want_to_set: EditorMain, dock_widget: "DestroyDock")
 def _dock_builders(ui_we_want_to_set: EditorMain) -> dict:
     """回傳 widget_type → (title_key, widget_factory) / Map dock type to title + widget factory."""
     return {
-        "frontengine": ("dock_frontengine_title", lambda: FrontEngineMainUI(redirect_output=False)),
-        "ipython": ("dock_ipython_title", lambda: IpythonWidget(ui_we_want_to_set)),
-        "chat_ui": ("chat_ui_dock_label", lambda: ChatUI(ui_we_want_to_set)),
+        "frontengine": ("dock_frontengine_title", lambda: frontengine_ui(redirect_output=False)),
+        "ipython": ("dock_ipython_title", lambda: ipython_widget(ui_we_want_to_set)),
+        "chat_ui": ("chat_ui_dock_label", lambda: chat_ui(ui_we_want_to_set)),
         "git_client": ("tab_menu_git_client_tab_name", GitGui),
         "git_branch_tree_view": ("tab_menu_git_branch_tree_view_tab_name", GitTreeViewGUI),
         "variable_inspector": ("tab_menu_variable_inspector_tab_name", VariableInspector),

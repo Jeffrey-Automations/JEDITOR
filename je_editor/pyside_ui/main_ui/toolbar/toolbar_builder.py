@@ -184,8 +184,8 @@ def _open_file(main_window: EditorMain) -> None:
 
 def _save_file(main_window: EditorMain) -> None:
     """儲存檔案 / Save file"""
-    from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import choose_file_get_save_file_path
-    choose_file_get_save_file_path(main_window)
+    from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
+    save_current_file(main_window)
 
 
 def _run_program(main_window: EditorMain) -> None:

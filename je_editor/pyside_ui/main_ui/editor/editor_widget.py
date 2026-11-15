@@ -498,6 +498,19 @@ class EditorWidget(QWidget):
         if not file_path.exists():
             return
 
+        # 檔案裡的內容就是編輯器裡的內容：那是我們自己寫的（自動儲存、存檔），不必問。
+        # Windows 上一次寫入會讓監看送出兩次訊號，只數「下一次不算」擋不住第二次，
+        # 使用者就會被自己的自動儲存問「檔案被外部修改了，要重新載入嗎」
+        # The file holds what the editor holds: that was our own write, an
+        # auto-save or a save, and there is nothing to ask. One write raises the
+        # watcher's signal twice on Windows, which counting "ignore the next one"
+        # does not stop, so the editor's own auto-save asked whether to reload a
+        # file "modified externally"
+        if self._file_holds_the_editors_text(file_path):
+            if path not in self._file_watcher.files():
+                self._file_watcher.addPath(path)
+            return
+
         reply = QMessageBox.question(
             self,
             language_wrapper.language_word_dict.get("file_changed_externally_title"),
@@ -528,6 +541,21 @@ class EditorWidget(QWidget):
         # 重新加入監控 / Re-add to watcher
         if path not in self._file_watcher.files():
             self._file_watcher.addPath(path)
+
+    def _file_holds_the_editors_text(self, file_path: Path) -> bool:
+        """
+        磁碟上的檔案內容是不是跟編輯器裡的一樣
+        Whether the file on disk holds the same text as the editor.
+
+        :param file_path: 要比對的檔案 / the file to compare
+        :return: 一樣時為 ``True``；讀不了時為 ``False``
+            ``True`` when they match, ``False`` when the file cannot be read
+        """
+        try:
+            result = read_file_with_encoding(str(file_path), self.file_encoding)
+        except JEditorOpenFileException:
+            return False
+        return result is not None and result[1] == self.code_edit.toPlainText()
 
     def close(self) -> bool:
         """

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 from PySide6.QtWidgets import QFileDialog
 
 from je_editor.pyside_ui.main_ui.editor.editor_widget import EditorWidget
+from je_editor.pyside_ui.main_ui.shell.workbench import workbench_of
 
 
 def _prompt_for_file(parent_qt_instance: EditorMain) -> str:
@@ -31,6 +32,40 @@ def _prompt_for_file(parent_qt_instance: EditorMain) -> str:
             File (*.*)"""
     )[0]
     return file_path or ""
+
+
+def _open_in_a_tab(parent_qt_instance: EditorMain) -> EditorWidget | None:
+    """
+    問使用者要開哪個檔案，並開進分頁
+    Ask which file to open, and open it in a tab.
+
+    視窗有外框時，檔案開在自己的分頁（空白且沒改過的分頁會直接拿來用），所以不會
+    蓋掉前景分頁裡還沒存的內容。沒有外框的宿主視窗維持原本的做法：開進前景的編輯
+    分頁。
+    In a window with the shell the file opens in a tab of its own, a blank and
+    untouched tab being reused, so nothing unsaved in the tab in front is
+    replaced. A host window without the shell keeps the earlier behaviour: the
+    file opens into the editor tab in front.
+
+    :param parent_qt_instance: 主視窗 / the main window
+    :return: 開著那個檔案的分頁；取消或沒開成時為 ``None``
+        the tab now holding the file, or ``None`` when cancelled or not opened
+    """
+    workbench = workbench_of(parent_qt_instance)
+    current = parent_qt_instance.tab_widget.currentWidget()
+    if workbench is None and not isinstance(current, EditorWidget):
+        return None
+    file_path = _prompt_for_file(parent_qt_instance)
+    if not file_path:
+        return None
+    if workbench is None:
+        return current if current.open_an_file(Path(file_path)) else None
+    workbench.open_file(Path(file_path))
+    opened = parent_qt_instance.tab_widget.currentWidget()
+    if (isinstance(opened, EditorWidget) and opened.current_file
+            and Path(str(opened.current_file)) == Path(file_path)):
+        return opened
+    return None
 
 
 def choose_file_get_open_file_path(parent_qt_instance: EditorMain) -> None:
@@ -48,14 +83,8 @@ def choose_file_get_open_file_path(parent_qt_instance: EditorMain) -> None:
     """
     jeditor_logger.info("open_file_dialog.py choose_file_get_open_file_path"
                         f" parent_qt_instance: {parent_qt_instance}")
-    widget = parent_qt_instance.tab_widget.currentWidget()
-    if not isinstance(widget, EditorWidget):
-        return
-
-    file_path = _prompt_for_file(parent_qt_instance)
-    if not file_path:
-        return
-    if not widget.open_an_file(Path(file_path)):
+    widget = _open_in_a_tab(parent_qt_instance)
+    if widget is None:
         return
 
     from je_editor.pyside_ui.main_ui.menu.file_menu.build_file_menu import add_to_recent_files

@@ -429,7 +429,7 @@ class EditorMain(QMainWindow, QtStyleTools):
         apply_ui_style(self, style_name)
         # 顏色跟著樣式走：淺色樣式要用淺色底調出來的那一組
         # The colours follow the style: a light one needs the light set
-        apply_theme_colors(style_name)
+        apply_theme_colors(style_name if isinstance(style_name, str) else DEFAULT_STYLE)
         self.set_status_branch(self.status_branch_label.text())
 
     def _open_file_paths(self) -> list[str]:
@@ -677,8 +677,8 @@ class EditorMain(QMainWindow, QtStyleTools):
             if reply == QMessageBox.StandardButton.Cancel:
                 return
             if reply == QMessageBox.StandardButton.Save:
-                from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import choose_file_get_save_file_path
-                if not choose_file_get_save_file_path(self):
+                from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
+                if not save_current_file(self):
                     return  # 使用者取消儲存 / User cancelled save
         if widget:
             widget.close()

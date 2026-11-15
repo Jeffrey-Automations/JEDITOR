@@ -360,6 +360,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
+| `lazy_widgets.py` | 50 | AI 聊天面板、IPython 主控台與 FrontEngine 的建立函式，匯入放在函式裡：選單在啟動時建立，這三個到有人打開才載入 |
 | `set_menu_bar.py` | 71 | 依序組裝 11 個子選單；extend 模式不建插件選單 |
 | `file_menu/build_file_menu.py` | 316 | 檔案選單：開 / 存 / 另存、最近檔案（上限 10）、編碼、行尾、字型與大小 |
 | `file_menu/encoding_actions.py` | 186 | 實際套用編碼 / 行尾、存檔前格式化、儲存所有分頁（一個分頁存不了，其他照存並回報） |

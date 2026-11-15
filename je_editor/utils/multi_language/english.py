@@ -93,6 +93,7 @@ english_word_dict = {
     "workspace_no_extra_folders": "The workspace has no added folders",
     "workspace_folder_already_added": "That folder is already in the workspace",
     "file_menu_save_file_label": "Save File",
+    "file_menu_save_as_label": "Save As...",
     "file_menu_encoding_label": "Encodings",
     "file_menu_line_ending_label": "Line Endings",
     "file_menu_save_all_label": "Save All",

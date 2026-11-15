@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QAction
-from frontengine import FrontEngineMainUI
 
 from je_editor.pyside_ui.code.variable_inspector.inspector_gui import VariableInspector
-from je_editor.pyside_ui.main_ui.ai_widget.chat_ui import ChatUI
-from je_editor.pyside_ui.main_ui.ipython_widget.ipython_console import IpythonWidget
+from je_editor.pyside_ui.main_ui.menu.lazy_widgets import chat_ui, frontengine_ui, ipython_widget
 from je_editor.pyside_ui.main_ui.outline_panel.outline_panel_widget import OutlinePanelWidget
 from je_editor.pyside_ui.main_ui.todo_panel.todo_panel_widget import TodoPanelWidget
 from je_editor.utils.logging.loggin_instance import jeditor_logger
@@ -87,7 +85,7 @@ def add_ipython_tab(ui_we_want_to_set: EditorMain) -> None:
     # 在主編輯器中新增 IPython 互動式分頁
     # Add an IPython interactive tab
     ui_we_want_to_set.tab_widget.addTab(
-        IpythonWidget(ui_we_want_to_set),  # 建立 IPython 元件 / Create IPython widget
+        ipython_widget(ui_we_want_to_set),  # 建立 IPython 元件 / Create IPython widget
         f"{language_wrapper.language_word_dict.get('tab_menu_ipython_tab_name')} "
         f"{ui_we_want_to_set.tab_widget.count()}"
     )
@@ -111,7 +109,7 @@ def add_frontengine_tab(ui_we_want_to_set: EditorMain) -> None:
     # Add FrontEngine tab
     jeditor_logger.info(f"build_tab_menu.py add frontengine tab ui_we_want_to_set: {ui_we_want_to_set}")
     ui_we_want_to_set.tab_widget.addTab(
-        FrontEngineMainUI(show_system_tray_ray=False, redirect_output=False),
+        frontengine_ui(show_system_tray_ray=False, redirect_output=False),
         f"{language_wrapper.language_word_dict.get('tab_menu_frontengine_tab_name')} "
         f"{ui_we_want_to_set.tab_widget.count()}")
 
@@ -123,7 +121,7 @@ def add_chat_ui_tab(ui_we_want_to_set: EditorMain) -> None:
     # 在主編輯器中新增聊天分頁
     # Add a chat tab into the main editor
     ui_we_want_to_set.tab_widget.addTab(
-        ChatUI(ui_we_want_to_set),  # 建立聊天元件 / Create Chat UI widget
+        chat_ui(ui_we_want_to_set),  # 建立聊天元件 / Create Chat UI widget
         f"{language_wrapper.language_word_dict.get('tab_menu_chat_ui_tab_name')} "
         f"{ui_we_want_to_set.tab_widget.count()}"
     )

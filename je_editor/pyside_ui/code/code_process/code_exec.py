@@ -18,6 +18,10 @@ from je_editor.utils.logging.loggin_instance import jeditor_logger
 from je_editor.utils.venv_check.check_venv import check_and_choose_venv, get_venv_path
 
 
+# 編輯分頁上存放執行管理器的屬性 / The editor tab's attributes that hold a run manager
+_MANAGER_SLOTS = ("exec_program", "exec_python_debugger")
+
+
 class ExecManager(BaseProcessManager):
     """
     程式執行管理器
@@ -225,7 +229,16 @@ class ExecManager(BaseProcessManager):
         if self.timer is not None:
             self.timer.stop()
         self.exit_program()
-        self.main_window.exec_program = None
+        # 清掉「存著這個管理器的那一格」。以前一律清 exec_program：除錯器跑完後
+        # exec_python_debugger 還留著，同一個分頁就再也不能除錯；而且會把正在執行
+        # 的程式那一格清掉
+        # Clear the slot this manager was stored in. It used to clear
+        # exec_program whatever it was: after a debugger run
+        # exec_python_debugger stayed set, so that tab could never debug again,
+        # and the slot of a program still running was wiped
+        for slot in _MANAGER_SLOTS:
+            if getattr(self.main_window, slot, None) is self:
+                setattr(self.main_window, slot, None)
         run_instance_manager.remove_instance(self)
 
     def _on_process_finished(self) -> None:

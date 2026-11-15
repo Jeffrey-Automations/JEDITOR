@@ -47,7 +47,7 @@ from je_editor.pyside_ui.dialog.file_dialog.create_file_dialog import CreateFile
 from je_editor.pyside_ui.dialog.file_dialog.open_file_dialog import choose_file_get_open_file_path, \
     choose_dir_get_dir_path
 from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import (
-    choose_file_get_save_file_path, report_save_failure
+    choose_file_get_save_file_path, report_save_failure, save_current_file
 )
 
 
@@ -113,9 +113,17 @@ def set_file_menu(ui_we_want_to_set: EditorMain) -> None:
         language_wrapper.language_word_dict.get("file_menu_save_file_label"))
     bind(ui_we_want_to_set.file_menu.save_file_action, "save_file")
     ui_we_want_to_set.file_menu.save_file_action.triggered.connect(
-        lambda: choose_file_get_save_file_path(parent_qt_instance=ui_we_want_to_set)
+        lambda: save_current_file(ui_we_want_to_set)
     )
     ui_we_want_to_set.file_menu.addAction(ui_we_want_to_set.file_menu.save_file_action)
+
+    # 另存新檔：一律問要存到哪裡 / Save As: always asks where
+    ui_we_want_to_set.file_menu.save_as_action = QAction(
+        language_wrapper.language_word_dict.get("file_menu_save_as_label"))
+    ui_we_want_to_set.file_menu.save_as_action.triggered.connect(
+        lambda: choose_file_get_save_file_path(parent_qt_instance=ui_we_want_to_set)
+    )
+    ui_we_want_to_set.file_menu.addAction(ui_we_want_to_set.file_menu.save_as_action)
 
     # 最近開啟的檔案選單 / Recent Files menu
     add_recent_files_menu(ui_we_want_to_set)
