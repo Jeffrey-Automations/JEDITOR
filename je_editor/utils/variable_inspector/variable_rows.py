@@ -96,9 +96,13 @@ def namespace_rows(namespace: Mapping[str, object], hidden: Mapping[str, object]
     :return: 依命名空間的順序排列的列 / the rows, in the namespace's order
     """
     not_the_users = hidden or {}
+    # 先抄一份：describe() 會呼叫使用者物件的 __repr__，它若動到命名空間，邊走邊改會出錯
+    # A copy first: describe() calls a user object's __repr__, and one that touches
+    # the namespace would change it while it is being walked
+    snapshot = tuple(namespace.items())
     return [
         VariableRow(name, type(value).__name__, describe(value))
-        for name, value in list(namespace.items())
+        for name, value in snapshot
         if isinstance(name, str) and not name.startswith(_PRIVATE_PREFIX)
         and not_the_users.get(name, _MISSING) is not value
     ]

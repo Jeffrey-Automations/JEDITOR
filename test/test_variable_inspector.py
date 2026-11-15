@@ -99,7 +99,7 @@ class TestTheRows:
 
 
 class TestWhereTheVariablesComeFrom:
-    @pytest.fixture()
+    @pytest.fixture
     def hub(self):
         built = VariableHub()
         yield built
@@ -150,11 +150,11 @@ class TestWhereTheVariablesComeFrom:
 
 
 class TestAPausedDebugger:
-    @pytest.fixture()
+    @pytest.fixture
     def fake(self):
         return FakeSession()
 
-    @pytest.fixture()
+    @pytest.fixture
     def controller(self, fake):
         services = EditorServices()
         services.debug_adapters.register("debugpy", lambda: fake)
@@ -163,7 +163,7 @@ class TestAPausedDebugger:
         built.deleteLater()
         services.shutdown()
 
-    @pytest.fixture()
+    @pytest.fixture
     def hub(self, controller):
         built = VariableHub(controller)
         yield built
@@ -248,13 +248,13 @@ class TestAPausedDebugger:
 
 
 class TestTheTable:
-    @pytest.fixture()
+    @pytest.fixture
     def hub(self):
         built = VariableHub()
         yield built
         built.deleteLater()
 
-    @pytest.fixture()
+    @pytest.fixture
     def inspector(self, hub, qtbot):
         built = VariableInspector(hub)
         qtbot.addWidget(built)
@@ -454,3 +454,16 @@ class TestWithTheRealDebugger:
             hub.deleteLater()
             controller.deleteLater()
             services.shutdown()
+
+
+def test_a_repr_that_changes_the_namespace_does_not_break_the_listing():
+    namespace: dict = {}
+
+    class Meddling:
+        def __repr__(self) -> str:
+            namespace["added_while_listing"] = 1
+            return "meddling"
+
+    namespace["meddler"] = Meddling()
+
+    assert namespace_rows(namespace) == [VariableRow("meddler", "Meddling", "meddling")]

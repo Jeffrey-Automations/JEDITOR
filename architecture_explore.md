@@ -213,7 +213,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `lsp/lsp_protocol.py` | 476 | LSP 訊息編解碼：`MessageReader`、request / notification、completion / hover / definition / references / symbols / rename / diagnostics 的回應解析 |
 | `lsp/language_servers.py` | 95 | 副檔名 → 伺服器指令對照，並併入使用者設定 |
 | `child_process/child_environment.py` | 81 | `child_environment()`：執行、除錯（`LocalTaskRunner`）、Shell、終端機（`QProcessEnvironment`）與測試面板啟動程式時用的環境。宿主登記的函式每次啟動都會被呼叫；它出錯或回傳的不是 `str → str` 的對照表時，記錄後改用 `os.environ`。編輯器自己用的工具（git、ruff、語言伺服器）不經過這裡 |
-| `variable_inspector/variable_rows.py` | 143 | 變數檢視器的列（純邏輯）：`namespace_rows()`（和 `%who` 同一套規則：底線開頭與 IPython 自己放的不列）、`describe()`（`reprlib` 限長的 repr，壞掉的 `__repr__` 不會弄垮表格）、`debugger_rows()`、`parse_value()`（只接受字面值） |
+| `variable_inspector/variable_rows.py` | 147 | 變數檢視器的列（純邏輯）：`namespace_rows()`（和 `%who` 同一套規則：底線開頭與 IPython 自己放的不列）、`describe()`（`reprlib` 限長的 repr，壞掉的 `__repr__` 不會弄垮表格）、`debugger_rows()`、`parse_value()`（只接受字面值） |
 | `test_runner/pytest_output.py` | 302 | 解析 pytest 輸出：每筆結果、失敗位置、traceback、覆蓋率、結尾統計 |
 | `debugger/pdb_commands.py` | 105 | 組出 pdb 指令（設 / 清中斷點、step into/over/out） |
 | `format_code/yapf_format.py` | 48 | 以 yapf（google style）格式化原始碼 |
@@ -323,7 +323,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `textedit_code_result/code_record.py` | 89 | `CodeRecord(QTextEdit)`：輸出區，支援搜尋 |
 | `auto_save/auto_save_thread.py` | 120 | `CodeEditSaveThread`：定時存檔；`_TextFetcher` 確保在主執行緒取文字；存檔失敗只記錄，執行緒繼續 |
 | `auto_save/auto_save_manager.py` | 64 | 建立 / 取代分頁的自動儲存執行緒，維護兩個全域字典 |
-| `variable_inspector/inspector_gui.py` | 295 | 變數檢視器：`VariableModel`（顯示一個命名空間，或一組算好的唯讀列；內容沒變就不重設模型）+ 過濾代理 + `VariableInspector`（上方一行說明變數是誰的；看得到時才每 500 ms 更新）。變數由 `set_hub()` 交給它的 `VariableHub` 提供 |
+| `variable_inspector/inspector_gui.py` | 297 | 變數檢視器：`VariableModel`（顯示一個命名空間，或一組算好的唯讀列；內容沒變就不重設模型）+ 過濾代理 + `VariableInspector`（上方一行說明變數是誰的；看得到時才每 500 ms 更新）。變數由 `set_hub()` 交給它的 `VariableHub` 提供 |
 | `variable_inspector/variable_hub.py` | 223 | `VariableHub(QObject)`：一個視窗裡可以檢視的變數從哪裡來。IPython 主控台建立時登記它行程內的 shell（弱參考，`user_ns` 就是命名空間本身，可以直接改）；除錯器暫停時改為跟著 `DebugController` 的訊號查暫停那一層的區域變數（除錯面板沒開時自己查堆疊，使用者在面板選別層就跟過去），唯讀。`source()` 回答現在該顯示誰的，`changed` 訊號通知檢視器 |
 
 ### 5.7 `pyside_ui/main_ui/` — 主視窗與面板

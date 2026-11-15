@@ -271,13 +271,15 @@ class VariableInspector(QWidget):
     def refresh(self) -> None:
         """照來源現在的狀態更新表格與上面的說明 / Update the table and the note above it from the source as it is now."""
         words = language_wrapper.language_word_dict
-        source = self._hub.source() if self._hub is not None else VariableSource.NONE
-        if source is VariableSource.DEBUGGER:
-            self.model.show_rows(self._hub.paused_rows())
+        hub = self._hub
+        source = hub.source() if hub is not None else VariableSource.NONE
+        namespace = hub.namespace() if hub is not None else None
+        if hub is not None and source is VariableSource.DEBUGGER:
+            self.model.show_rows(hub.paused_rows())
             self.source_label.setText(str(words.get("variable_inspector_source_debugger")).format(
-                frame=self._hub.paused_frame() or "?"))
-        elif source is VariableSource.CONSOLE:
-            self.model.show_namespace(self._hub.namespace(), self._hub.hidden())
+                frame=hub.paused_frame() or "?"))
+        elif hub is not None and namespace is not None and source is VariableSource.CONSOLE:
+            self.model.show_namespace(namespace, hub.hidden())
             self.source_label.setText(str(words.get("variable_inspector_source_console")))
         else:
             self.model.show_rows([])

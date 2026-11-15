@@ -34,7 +34,7 @@ def no_provider_left_behind():
     set_child_environment_provider(None)
 
 
-@pytest.fixture()
+@pytest.fixture
 def host_variable(monkeypatch):
     monkeypatch.setenv(HOST_ONLY, "for the host alone")
 
@@ -120,7 +120,8 @@ class TestTheEnvironmentAChildGets:
 
         child_environment()
 
-        assert "12345" not in repr(logged) and "API_TOKEN" not in repr(logged)
+        assert "12345" not in repr(logged)
+        assert "API_TOKEN" not in repr(logged)
 
     def test_hosts_reach_it_from_the_package(self):
         assert je_editor.set_child_environment_provider is set_child_environment_provider
