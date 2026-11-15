@@ -227,12 +227,30 @@ class TestPanelWidget(QWidget):
             return False
         self.run_button.setEnabled(False)
         self.status_label.setText(language_wrapper.language_word_dict.get("test_panel_running"))
-        self._thread = PytestRunThread(
+        thread = PytestRunThread(
             self._working_dir, node_ids, self.coverage_check.isChecked())
-        self._thread.finished_output.connect(self.apply_output)
-        self._thread.finished.connect(self._thread.deleteLater)
-        self._thread.start()
+        thread.finished_output.connect(self.apply_output)
+        thread.finished.connect(lambda done=thread: self._release_thread(done))
+        self._thread = thread
+        thread.start()
         return True
+
+    def _release_thread(self, thread: PytestRunThread) -> None:
+        """
+        跑完的執行緒交給 Qt 刪除，並放掉對它的引用
+        Hand a finished thread to Qt for deletion and let go of the reference to it.
+
+        只排刪除而留著引用的話，下一次問它還在不在跑（再跑一次、或關閉面板）就是
+        去碰一個已經刪掉的物件，整個行程會當掉。
+        Scheduling the deletion while keeping the reference meant the next
+        question put to it -- another run, or the panel closing -- reached an
+        object already deleted, which takes the whole process down.
+
+        :param thread: 剛跑完的執行緒 / the thread that just finished
+        """
+        if self._thread is thread:
+            self._thread = None
+        thread.deleteLater()
 
     def selected_node_ids(self) -> list[str]:
         """
