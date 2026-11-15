@@ -141,7 +141,7 @@ def _apply_material(window: QWidget | None, app: QApplication, style_name: str) 
     apply_stylesheet(app, theme=style_name)
 
 
-def apply_ui_style(window: QWidget | None, style_name: str | None) -> bool:
+def apply_ui_style(window: QWidget | None, style_name: object) -> bool:
     """
     把樣式套用到應用程式，並重畫視窗的圖示
     Apply a style to the application and redraw the window's icons.
@@ -156,7 +156,12 @@ def apply_ui_style(window: QWidget | None, style_name: str | None) -> bool:
     app = QApplication.instance()
     if not isinstance(app, QApplication):
         return False
-    name = style_name or DEFAULT_STYLE
+    # 設定檔可能被手動改過：不是字串（或是空的）就用預設樣式。以前一個數字會從
+    # 視窗的建構子裡丟出 TypeError，編輯器整個起不來
+    # A settings file may be hand-edited: anything but a non-empty string means
+    # the default style. A number used to raise TypeError out of the window's
+    # constructor, and the editor never started
+    name = style_name.strip() if isinstance(style_name, str) and style_name.strip() else DEFAULT_STYLE
     jeditor_logger.info(f"ui_style.py apply_ui_style {name}")
     tokens = tokens_for(name)
     if is_builtin_style(name):

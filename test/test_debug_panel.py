@@ -586,14 +586,14 @@ class TestTheActions:
 
 class TestRunDebuggerFromTheMenu:
     def test_the_adapter_is_used_when_there_is_one(self, window, fake):
-        with patch.object(build_debug_menu, "choose_file_get_save_file_path", return_value=True), \
+        with patch.object(build_debug_menu, "save_current_file", return_value=True), \
                 patch.object(debug_actions, "show_debug_panel"):
             build_debug_menu.run_debugger(window)
         assert fake.calls[0][0] == "launch"
         assert window.tab.exec_python_debugger is None
 
     def test_an_unsaved_file_starts_nothing(self, window, fake):
-        with patch.object(build_debug_menu, "choose_file_get_save_file_path", return_value=False):
+        with patch.object(build_debug_menu, "save_current_file", return_value=False):
             build_debug_menu.run_debugger(window)
         assert fake.calls == []
 
@@ -605,7 +605,7 @@ class TestRunDebuggerFromTheMenu:
 
     def test_without_an_adapter_the_pdb_console_is_started(self, window):
         window.debug_controller = DebugController(EditorServices())
-        with patch.object(build_debug_menu, "choose_file_get_save_file_path", return_value=True), \
+        with patch.object(build_debug_menu, "save_current_file", return_value=True), \
                 patch.object(build_debug_menu, "ExecManager") as manager, \
                 patch.object(build_debug_menu, "ProcessInput"):
             build_debug_menu.run_debugger(window)

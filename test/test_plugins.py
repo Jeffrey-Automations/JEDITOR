@@ -69,3 +69,17 @@ class TestPluginMetadata:
         register_plugin_metadata(meta)
         all_meta = get_all_plugin_metadata()
         assert any(m["name"] == "TestPlugin" for m in all_meta)
+
+
+class TestAPluginLanguagesOwnName:
+    def test_the_language_menu_gets_the_display_name(self):
+        # Only the dictionary used to be written, so the menu listed the key.
+        from je_editor.plugins import register_natural_language
+        from je_editor.utils.multi_language.multi_language_wrapper import language_wrapper
+        try:
+            register_natural_language("Testish", "Tëstïsh", {"file_menu_label": "Fïle"})
+            assert language_wrapper.display_name("Testish") == "Tëstïsh"
+            assert language_wrapper.choose_language_dict["Testish"] == {"file_menu_label": "Fïle"}
+        finally:
+            language_wrapper.choose_language_dict.pop("Testish", None)
+            language_wrapper.display_names.pop("Testish", None)

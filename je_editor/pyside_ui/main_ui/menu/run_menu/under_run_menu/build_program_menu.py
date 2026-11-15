@@ -15,7 +15,7 @@ from PySide6.QtGui import QAction
 from je_editor.pyside_ui.code.code_process.code_exec import ExecManager
 # 匯入檔案儲存對話框
 # Import file save dialog
-from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import choose_file_get_save_file_path
+from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
 # 匯入編輯器元件
 # Import EditorWidget
 from je_editor.pyside_ui.main_ui.editor.editor_widget import EditorWidget
@@ -95,7 +95,7 @@ def run_program(ui_we_want_to_set: EditorMain) -> None:
         please_close_current_running_messagebox(ui_we_want_to_set)
         return
     widget.python_compiler = ui_we_want_to_set.python_compiler
-    if not choose_file_get_save_file_path(ui_we_want_to_set):
+    if not save_current_file(ui_we_want_to_set):
         return
     # 輸出面板收著的話打開它，否則程式跑了卻看不到結果
     # Open the output view when it is hidden, or the program runs with nothing to show for it

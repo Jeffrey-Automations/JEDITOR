@@ -114,44 +114,81 @@ def choose_file_get_save_file_path(parent_qt_instance: EditorMain) -> bool:
 
         # 確認使用者有選擇檔案路徑 / Ensure user selected a file path
         if file_path is not None and file_path != "":
-            # 更新目前檔案路徑 / Update current file path
-            previous_file = widget.current_file
-            widget.current_file = file_path
-
-            # 若已開啟「存檔時格式化」，先套用再寫出
-            # Apply format-on-save, when that setting is on, before writing
-            format_before_save(widget)
-
-            # 以該分頁的編碼與行尾寫入 / Write with the tab's encoding and line ending
-            try:
-                write_file_with_encoding(
-                    file_path, widget.code_edit.toPlainText(),
-                    getattr(widget, "file_encoding", DEFAULT_ENCODING),
-                    getattr(widget, "line_ending", LINE_ENDING_LF))
-            except JEditorSaveFileException as error:
-                # 沒寫成就不能把分頁改指向新路徑，也不能標成已存檔
-                # Nothing was written: the tab keeps its old file and stays unsaved
-                widget.current_file = previous_file
-                report_save_failure(parent_qt_instance, file_path, error)
-                return False
-
-            # 更新已開啟檔案管理字典 / Update opened file manager dictionary
-            path = Path(file_path)
-            file_is_open_manager_dict.update({str(path): str(path.name)})
-
-            # 若有自動儲存執行緒，更新其監控的檔案與編輯器
-            # If auto-save thread exists, update its file and editor reference
-            if widget.code_save_thread is not None:
-                widget.code_save_thread.file = file_path
-                widget.code_save_thread.editor = widget.code_edit
-
-            # 告訴語言伺服器檔案存了：有些檢查只在存檔後才跑
-            # Tell the language server the file was saved: some checks only run then
-            widget.code_edit.lsp_client.did_save(widget.code_edit.toPlainText())
-
-            # 更新分頁標題並清除未儲存標記 / Update tab title and clear unsaved marker
-            widget.rename_self_tab()
-            widget.mark_saved()
-            return True
+            return _write_tab(parent_qt_instance, widget, file_path)
         return False
     return False
+
+
+def _write_tab(parent_qt_instance: EditorMain, widget: EditorWidget, file_path: str) -> bool:
+    """
+    把一個編輯分頁的內容寫到指定的檔案，並讓分頁跟著那個檔案
+    Write an editor tab's content to a file, and make the tab follow that file.
+
+    :param parent_qt_instance: 主視窗，錯誤訊息的父視窗 / the main window, parent of any error message
+    :param widget: 要存的編輯分頁 / the editor tab to save
+    :param file_path: 要寫到哪裡 / where to write it
+    :return: 有寫成時為 ``True`` / ``True`` when it was written
+    """
+    # 更新目前檔案路徑 / Update current file path
+    previous_file = widget.current_file
+    widget.current_file = file_path
+
+    # 若已開啟「存檔時格式化」，先套用再寫出
+    # Apply format-on-save, when that setting is on, before writing
+    format_before_save(widget)
+
+    # 以該分頁的編碼與行尾寫入 / Write with the tab's encoding and line ending
+    try:
+        write_file_with_encoding(
+            file_path, widget.code_edit.toPlainText(),
+            getattr(widget, "file_encoding", DEFAULT_ENCODING),
+            getattr(widget, "line_ending", LINE_ENDING_LF))
+    except JEditorSaveFileException as error:
+        # 沒寫成就不能把分頁改指向新路徑，也不能標成已存檔
+        # Nothing was written: the tab keeps its old file and stays unsaved
+        widget.current_file = previous_file
+        report_save_failure(parent_qt_instance, file_path, error)
+        return False
+
+    # 更新已開啟檔案管理字典 / Update opened file manager dictionary
+    path = Path(file_path)
+    file_is_open_manager_dict.update({str(path): str(path.name)})
+
+    # 若有自動儲存執行緒，更新其監控的檔案與編輯器
+    # If auto-save thread exists, update its file and editor reference
+    if widget.code_save_thread is not None:
+        widget.code_save_thread.file = file_path
+        widget.code_save_thread.editor = widget.code_edit
+
+    # 告訴語言伺服器檔案存了：有些檢查只在存檔後才跑
+    # Tell the language server the file was saved: some checks only run then
+    widget.code_edit.lsp_client.did_save(widget.code_edit.toPlainText())
+
+    # 更新分頁標題並清除未儲存標記 / Update tab title and clear unsaved marker
+    widget.rename_self_tab()
+    widget.mark_saved()
+    return True
+
+
+def save_current_file(parent_qt_instance: EditorMain) -> bool:
+    """
+    儲存目前的分頁：有檔案就寫回原處，沒有才問要存到哪裡
+    Save the tab in front: where its file is when it has one, and asking where only when it has none.
+
+    以前「儲存檔案」、執行與除錯每次都跳出另存新檔的對話框，即使分頁早就有檔案。
+    Save File, Run and Debug used to open the Save As dialog every time, even
+    for a tab that already had its file.
+
+    :param parent_qt_instance: 主視窗 / the main window
+    :return: 有存成時為 ``True`` / ``True`` when it was saved
+    """
+    jeditor_logger.info("save_file_dialog.py save_current_file")
+    widget = parent_qt_instance.tab_widget.currentWidget()
+    if not isinstance(widget, EditorWidget):
+        return False
+    if not widget.current_file:
+        return choose_file_get_save_file_path(parent_qt_instance)
+    # 自己寫的這一次不要被當成「檔案被別的程式改了」
+    # This write of our own must not be taken for another program changing the file
+    widget.mark_ignore_next_file_change()
+    return _write_tab(parent_qt_instance, widget, str(widget.current_file))

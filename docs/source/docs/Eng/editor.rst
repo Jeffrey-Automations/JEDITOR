@@ -31,11 +31,13 @@ File Operations
    * - **New File** (``Ctrl+N``)
      - Create a new empty file
    * - **Open File** (``Ctrl+O``)
-     - Open an existing file and load it into a tab
+     - Open an existing file in a tab of its own; a blank, untouched tab is reused
    * - **Open Folder** (``Ctrl+K``)
      - Open a project folder and display it in the file tree
    * - **Save File** (``Ctrl+S``)
-     - Save the current tab's content to disk
+     - Save the current tab to its file; a tab that has no file yet is asked where
+   * - **Save As...**
+     - Save the current tab under another name, which the tab then follows
 
 Recent Files
 ^^^^^^^^^^^^^

@@ -34,7 +34,7 @@ from je_editor.pyside_ui.code.code_process.code_exec import ExecManager
 
 # 匯入檔案儲存對話框
 # Import file save dialog
-from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import choose_file_get_save_file_path
+from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
 from je_editor.pyside_ui.main_ui.debug_panel.debug_actions import (
     attach_to_process, controller_of, edit_breakpoint_condition, start_debugging
 )
@@ -125,16 +125,16 @@ def run_debugger(ui_we_want_to_set: EditorMain) -> None:
         if controller is not None:
             if controller.is_active():
                 please_close_current_running_messagebox(ui_we_want_to_set)
-            elif choose_file_get_save_file_path(ui_we_want_to_set):
+            elif save_current_file(ui_we_want_to_set):
                 start_debugging(ui_we_want_to_set, widget.current_file)
             return
         # 確保沒有正在執行的除錯器
         # Ensure no debugger is already running
         if widget.exec_python_debugger is None:
             widget.python_compiler = ui_we_want_to_set.python_compiler
-            # 要求使用者選擇儲存檔案路徑
-            # Ask user to choose save file path
-            if choose_file_get_save_file_path(ui_we_want_to_set):
+            # 先存檔；還沒有檔案的分頁才會問要存到哪裡
+            # Save first; only a tab without a file is asked where
+            if save_current_file(ui_we_want_to_set):
                 # 建立程式執行管理器，並以 pdb 模式執行
                 # Create ExecManager and run with pdb
                 code_exec = ExecManager(widget, program_encoding=ui_we_want_to_set.encoding)

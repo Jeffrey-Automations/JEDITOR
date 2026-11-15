@@ -90,6 +90,7 @@ simplified_chinese_word_dict = {
     "workspace_no_extra_folders": "工作区没有另外添加的文件夹",
     "workspace_folder_already_added": "这个文件夹已经在工作区里",
     "file_menu_save_file_label": "保存文件",
+    "file_menu_save_as_label": "另存为...",
     "file_menu_encoding_label": "编码",
     "file_menu_line_ending_label": "行尾",
     "file_menu_save_all_label": "全部保存",

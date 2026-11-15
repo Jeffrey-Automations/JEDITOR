@@ -139,7 +139,7 @@ def _make_run_callback(ui_we_want_to_set: EditorMain, run_config: dict) -> Calla
     def callback() -> None:
         from je_editor.pyside_ui.main_ui.editor.editor_widget import EditorWidget
         from je_editor.pyside_ui.code.code_process.code_exec import ExecManager
-        from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import choose_file_get_save_file_path
+        from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
         from je_editor.pyside_ui.main_ui.menu.run_menu.under_run_menu.utils import \
             please_close_current_running_messagebox
 
@@ -151,7 +151,7 @@ def _make_run_callback(ui_we_want_to_set: EditorMain, run_config: dict) -> Calla
             please_close_current_running_messagebox(ui_we_want_to_set)
             return
 
-        if not choose_file_get_save_file_path(ui_we_want_to_set):
+        if not save_current_file(ui_we_want_to_set):
             return
 
         code_exec = ExecManager(widget, program_encoding=ui_we_want_to_set.encoding)

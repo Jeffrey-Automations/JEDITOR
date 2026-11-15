@@ -94,6 +94,7 @@ japanese_word_dict = {
     "workspace_no_extra_folders": "ワークスペースに追加されたフォルダーはありません",
     "workspace_folder_already_added": "そのフォルダーは既にワークスペースにあります",
     "file_menu_save_file_label": "ファイルを保存",
+    "file_menu_save_as_label": "名前を付けて保存...",
     "file_menu_encoding_label": "エンコーディング",
     "file_menu_line_ending_label": "改行コード",
     "file_menu_save_all_label": "すべて保存",
