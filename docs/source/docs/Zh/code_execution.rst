@@ -4,6 +4,10 @@
 JEditor 內建程式碼執行引擎，支援執行 Python 腳本、編譯式語言和任意 Shell 命令，
 無需離開編輯器。
 
+.. image:: image/screenshot-run-output.png
+   :alt: Python 檔案與執行它的輸出
+   :align: center
+
 執行 Python 腳本
 ------------------
 
@@ -23,6 +27,10 @@ JEditor 會自動偵測專案根目錄中的 ``venv`` 資料夾，並使用虛�
 
 除錯模式
 ---------
+
+.. image:: image/screenshot-debug-panel.png
+   :alt: 側邊欄的執行與除錯面板
+   :align: center
 
 按下 **F9** 為目前的 Python 檔案除錯。程式透過 Debug Adapter Protocol 在 ``debugpy`` 底下執行，
 **除錯面板** 會在編輯器旁邊開啟。程式可以用跟編輯器不同的直譯器（ **Python Env** 選的那一個），

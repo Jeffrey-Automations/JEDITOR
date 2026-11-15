@@ -58,6 +58,8 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261115-03 | 2026-11-15 | Screenshots retaken for the new window; screenshots in the docs | #docs #ui | [2026-11](2026-11.md) |
+| U-20261115-02 | 2026-11-15 | Crash on closing the test panel after a run; empty Diff Against HEAD tab; split view font | #bugfix #ui | [2026-11](2026-11.md) |
 | U-20261115-01 | 2026-11-15 | Window shell and built-in themes (roadmap M1, layout part) | #done #ui #theme | [2026-11](2026-11.md) |
 | U-20261102-01 | 2026-11-02 | Require Python 3.11; stop supporting 3.10 | #migration #deps #ci | [2026-11](2026-11.md) |
 | U-20261101-01 | 2026-11-01 | Patch setuptools and certifi in the publish lock | #bugfix #deps #security #ci | [2026-11](2026-11.md) |
@@ -111,6 +113,6 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 3 |
+| [2026-11.md](2026-11.md) | 2026-11 | 5 |
 | [2026-10.md](2026-10.md) | 2026-10 | 20 |
 | [2026-09.md](2026-09.md) | 2026-09 | 20 |

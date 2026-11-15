@@ -50,6 +50,7 @@
   - [Search and replace across the project](#search-and-replace-across-the-project)
   - [Read more of the file at once](#read-more-of-the-file-at-once)
   - [A terminal and a browser in the same window](#a-terminal-and-a-browser-in-the-same-window)
+  - [Debug and ask, beside the code](#debug-and-ask-beside-the-code)
   - [Make it yours](#make-it-yours)
 - [Key Features](#key-features)
 - [System Requirements](#system-requirements)
@@ -210,6 +211,23 @@ in-page search.
 
 <p align="center">
   <img src="image/screenshot-browser.png" alt="Embedded web browser"/>
+</p>
+
+### Debug and ask, beside the code
+
+**Run and Debug** is a view of the side bar: threads, the call stack, variables that are looked up
+as they are expanded, and a box to evaluate an expression in the paused frame. Its output goes to
+the Debug Console below the editor.
+
+<p align="center">
+  <img src="image/screenshot-debug-panel.png" alt="Run and Debug view in the side bar"/>
+</p>
+
+The AI chat opens in the secondary side bar on the right, so a conversation stays next to the file
+it is about, with the provider and the model chosen above it.
+
+<p align="center">
+  <img src="image/screenshot-ai-chat.png" alt="AI chat in the secondary side bar"/>
 </p>
 
 ### Make it yours

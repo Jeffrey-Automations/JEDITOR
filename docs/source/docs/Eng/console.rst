@@ -4,6 +4,10 @@ Console & REPL
 JEditor provides two types of interactive consoles: a Shell Console for running system commands,
 and a Jupyter/IPython Console for interactive Python sessions.
 
+.. image:: image/screenshot-terminal.png
+   :alt: The terminal in the bottom panel
+   :align: center
+
 Shell Console
 --------------
 

@@ -146,6 +146,10 @@ The **View** menu toggles each area and lists every view. Which areas are open, 
 each shows and their sizes are stored as ``shell_layout`` and restored on the next start.
 Any panel can still be opened as a floating dock from the **Dock** menu.
 
+.. image:: image/screenshot-outline-panel.png
+   :alt: The side bar showing the Outline view
+   :align: center
+
 Theming
 --------
 
@@ -160,6 +164,10 @@ part of the window. The dark and light styles of
 - The editor's own colors follow the window style: switching to a light theme moves the
   gutter, current-line and syntax colors to a light set. A color you picked yourself is
   left alone — only those still at a default follow the theme
+
+.. image:: image/screenshot-light-theme.png
+   :alt: The JEditor Light theme
+   :align: center
 
 Font Customization
 -------------------

@@ -11,6 +11,10 @@
   `# 初始化並記錄日誌` 被當成「註解掉的程式碼」。這是本專案雙語註解的正常寫法，不該刪。
   要清掉這一項得在 SonarCloud 把 issue 轉成 False Positive（用 API 改狀態需要 Administer
   Issues 權限）。
+- **#26** `image/screenshot-browser.png` 還是舊視窗的樣子。其他截圖是以 offscreen 重拍的（U-20261115-03），但
+  QtWebEngine 在 offscreen 下畫不出網頁內容（分頁標題有載入，畫面是空白），這一張要在真正的螢幕上開視窗才拍得到。
+  另外並排差異檢視器的行號區底色是寫死的淺灰（`line_number_code_viewer.py`），在內建深色主題下很突兀，
+  應該改用 `actually_color_dict` 的行號顏色。
 - **#21** 〔未確認〕整套測試在機器忙碌時偶爾被 Qt 中止（`Fatal Python error: Aborted`，結束代碼 3）。
   2026-10-08 看到兩次，都是主工作樹裡同時還有別的 pytest 行程在跑的時候；其中一次留有紀錄，停在
   `test_toolbar_actions.py::TestTheBranchScan::test_a_subdirectory_still_finds_the_repository` 的 setup，

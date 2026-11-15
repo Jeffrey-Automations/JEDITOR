@@ -139,6 +139,10 @@ AI 助手設定（詳見 :doc:`ai_assistant`），以供應者分組。每個供
 **檢視** 選單可以開關每一區，並列出每一個面板。哪些區域開著、各自顯示哪個面板與大小，
 會存成 ``shell_layout`` ，下次啟動時還原。任何面板仍然可以從 **Dock** 選單開成浮動視窗。
 
+.. image:: image/screenshot-outline-panel.png
+   :alt: 側邊欄顯示大綱面板
+   :align: center
+
 主題
 -----
 
@@ -150,6 +154,10 @@ JEditor 內建兩個主題 **JEditor Dark** 與 **JEditor Light** ，視窗的�
 - 工具列與活動列的圖示會以新主題的顏色重畫
 - 編輯器本身的顏色會跟隨視窗樣式：切換到淺色主題時，行號區、目前行與語法顏色也會換成
   淺色的一組。您自己挑過的顏色不會被蓋掉——只有仍是預設值的項目會跟著主題走
+
+.. image:: image/screenshot-light-theme.png
+   :alt: JEditor Light 主題
+   :align: center
 
 字型自訂
 ---------

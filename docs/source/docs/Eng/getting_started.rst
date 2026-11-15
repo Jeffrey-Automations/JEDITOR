@@ -100,6 +100,10 @@ Explorer on the left, the editor tabs in the middle and the Output panel below t
 change the theme from the **UI Style** menu at any time, and open or close each area from the
 **View** menu.
 
+.. image:: image/screenshot-main-window.png
+   :alt: The JEditor window
+   :align: center
+
 Project Structure
 ------------------
 

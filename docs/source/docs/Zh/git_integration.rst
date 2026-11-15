@@ -5,6 +5,14 @@ JEditor 內建完整功能的 Git 客戶端與圖形介面，由
 `GitPython <https://gitpython.readthedocs.io/>`_ 驅動。所有 Git 操作都可直接在
 編輯器內完成，無需外部工具。
 
+.. image:: image/screenshot-git-panel.png
+   :alt: 原始檔控制面板裡的 Git 用戶端
+   :align: center
+
+.. image:: image/screenshot-diff-side-by-side.png
+   :alt: 與 HEAD 的並排差異
+   :align: center
+
 開啟儲存庫
 -----------
 

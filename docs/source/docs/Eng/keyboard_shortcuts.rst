@@ -11,6 +11,10 @@ immediately, and only what differs from a default is stored. Only the keys handl
 directly by the editing area — listed under `Fixed Keys`_ — are not in that list and
 cannot be reassigned.
 
+.. image:: image/screenshot-shortcut-settings.png
+   :alt: The keyboard shortcut settings
+   :align: center
+
 File Operations
 ----------------
 
