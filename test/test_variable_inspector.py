@@ -77,11 +77,18 @@ class TestTheRows:
         assert rows[0].value_text.startswith("<Broken ")
         assert rows[1] == VariableRow("fine", "int", "1")
 
-    def test_a_value_that_cannot_even_be_measured_is_said_so(self):
-        # Named like a built-in container, it is asked for its length before its repr
-        impostor = type("list", (), {})()
+    def test_a_value_the_bounded_repr_itself_fails_on_is_said_so(self, monkeypatch):
+        # Python 3.11 asks a class merely named like a container for its length; later versions do not
+        from je_editor.utils.variable_inspector import variable_rows
 
-        assert describe(impostor) == "<list: repr failed (TypeError)>"
+        class Failing:
+            @staticmethod
+            def repr(_value: object) -> str:
+                raise TypeError("object of this type has no len()")
+
+        monkeypatch.setattr(variable_rows, "_REPR", Failing)
+
+        assert describe([1, 2]) == "<list: repr failed (TypeError)>"
 
     def test_a_debuggers_variables_are_shown_as_it_reports_them(self):
         rows = debugger_rows((Variable("first", "1", "int"), Variable("text", "y" * 5000, "str")))
