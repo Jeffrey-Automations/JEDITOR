@@ -51,6 +51,10 @@ def retranslate_ui(main_window, previous_words: Dict[str, str]) -> None:
     _retranslate_toolbar(main_window, previous_words, words)
     _retranslate_tabs(main_window, previous_words, words)
     _retranslate_docks(main_window, previous_words, words)
+    # 外框的面板標題與活動列 / The shell's view titles and its activity bar
+    relabel_shell = getattr(getattr(main_window, "workbench", None), "retranslate", None)
+    if callable(relabel_shell):
+        relabel_shell()
     refresh = getattr(main_window, "refresh_status_bar", None)
     if callable(refresh):
         refresh()

@@ -27,7 +27,9 @@ from je_editor.pyside_ui.main_ui.editor.process_input import ProcessInput
 from je_editor.pyside_ui.main_ui.menu.run_menu.under_run_menu.utils import please_close_current_running_messagebox
 # 匯入日誌紀錄器
 # Import logger instance
+from je_editor.pyside_ui.main_ui.shell.workbench import reveal_view
 from je_editor.utils.logging.loggin_instance import jeditor_logger
+from je_editor.utils.shell.shell_views import VIEW_OUTPUT
 # 匯入多語言包裝器
 # Import multi-language wrapper for UI localization
 from je_editor.utils.multi_language.multi_language_wrapper import language_wrapper
@@ -95,6 +97,9 @@ def run_program(ui_we_want_to_set: EditorMain) -> None:
     widget.python_compiler = ui_we_want_to_set.python_compiler
     if not choose_file_get_save_file_path(ui_we_want_to_set):
         return
+    # 輸出面板收著的話打開它，否則程式跑了卻看不到結果
+    # Open the output view when it is hidden, or the program runs with nothing to show for it
+    reveal_view(ui_we_want_to_set, VIEW_OUTPUT)
     _execute_program(widget, ui_we_want_to_set)
 
 

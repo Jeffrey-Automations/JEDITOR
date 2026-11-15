@@ -4,6 +4,8 @@ from pathlib import Path
 from je_editor.pyside_ui.main_ui.save_settings.setting_utils import write_setting
 from je_editor.utils.json.json_file import read_json
 from je_editor.utils.logging.loggin_instance import jeditor_logger
+from je_editor.utils.shell.layout_state import LAYOUT_SETTING_KEY
+from je_editor.utils.theme.ui_theme import DEFAULT_STYLE
 
 # 匯入通用的設定寫入工具
 # Import utility function to write settings
@@ -20,8 +22,10 @@ user_setting_dict = {
     "ui_font": "Lato",  # UI 字型 / UI font
     "ui_font_size": 12,  # UI 字體大小 / UI font size
     "language": "English",  # 語言設定 / Language setting
-    "ui_style": "dark_amber.xml",  # UI 樣式檔 / UI style file
-    "font": "Lato",  # 編輯器字型 / Editor font
+    # UI 樣式：內建主題的名字，或 qt-material 的樣式檔 / UI style: a built-in theme's name or a qt-material file
+    "ui_style": DEFAULT_STYLE,
+    # 編輯器字型：等寬字型，依序找到第一個裝了的 / Editor font: monospaced, the first one installed
+    "font": "Consolas, Menlo, DejaVu Sans Mono, monospace",
     "font_size": 12,  # 編輯器字體大小 / Editor font size
     "encoding": "utf-8",  # 檔案編碼 / File encoding
     "last_file": None,  # 上次開啟的檔案 / Last opened file
@@ -37,6 +41,9 @@ user_setting_dict = {
     "syntax_engine": "tree_sitter",
     # 使用者改過的快捷鍵，只記與預設不同的 / Shortcuts the user changed, defaults omitted
     "shortcuts": {},
+    # 外框的版面：哪些區域開著、顯示哪個面板、多寬；空的表示用預設版面
+    # The shell's layout: which areas are open, the view each shows and how wide; empty means the default
+    LAYOUT_SETTING_KEY: {},
 }
 
 

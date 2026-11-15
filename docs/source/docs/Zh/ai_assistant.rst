@@ -21,6 +21,10 @@ JEditor 有一個對話面板，不必離開編輯器就能與大型語言模型
 
 從 **Tab → ChatUI** 或 **Dock → AI** 開啟面板。
 
+.. image:: image/screenshot-ai-chat.png
+   :alt: 第二側邊欄的 AI 聊天
+   :align: center
+
 設定
 ----
 

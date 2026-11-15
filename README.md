@@ -50,6 +50,7 @@
   - [Search and replace across the project](#search-and-replace-across-the-project)
   - [Read more of the file at once](#read-more-of-the-file-at-once)
   - [A terminal and a browser in the same window](#a-terminal-and-a-browser-in-the-same-window)
+  - [Debug and ask, beside the code](#debug-and-ask-beside-the-code)
   - [Make it yours](#make-it-yours)
 - [Key Features](#key-features)
 - [System Requirements](#system-requirements)
@@ -212,6 +213,23 @@ in-page search.
   <img src="image/screenshot-browser.png" alt="Embedded web browser"/>
 </p>
 
+### Debug and ask, beside the code
+
+**Run and Debug** is a view of the side bar: threads, the call stack, variables that are looked up
+as they are expanded, and a box to evaluate an expression in the paused frame. Its output goes to
+the Debug Console below the editor.
+
+<p align="center">
+  <img src="image/screenshot-debug-panel.png" alt="Run and Debug view in the side bar"/>
+</p>
+
+The AI chat opens in the secondary side bar on the right, so a conversation stays next to the file
+it is about, with the provider and the model chosen above it.
+
+<p align="center">
+  <img src="image/screenshot-ai-chat.png" alt="AI chat in the secondary side bar"/>
+</p>
+
 ### Make it yours
 
 Every command's keys are listed in one editable table. Two commands claiming the same keys cannot be
@@ -229,8 +247,15 @@ shared ones, edited from **Tab > Edit Snippets** rather than by hand.
   <img src="image/screenshot-snippet-editor.png" alt="Snippet editor" width="760"/>
 </p>
 
-Themes come from Qt Material, and the editor's own colours follow whichever one you pick — a light
-window never leaves you with dark-theme syntax colours.
+The window is laid out the way current code editors are: an activity bar down the left edge, a side
+bar beside it (Explorer, Outline, Run and Debug, Testing, TODO), the editor tabs in the middle, a
+panel below them (Output, Problems, Terminal, Source Control, Debug Console, Format Check, Variables)
+and a secondary side bar on the right for the AI chat. Each area opens and closes on its own, and
+the layout is remembered.
+
+Two built-in themes, **JEditor Dark** (the default) and **JEditor Light**, style the whole window,
+and the Qt Material themes are still in the same menu. The editor's own colours follow whichever one
+you pick — a light window never leaves you with dark-theme syntax colours.
 
 <p align="center">
   <img src="image/screenshot-light-theme.png" alt="JEDITOR with a light theme"/>
@@ -251,7 +276,7 @@ window never leaves you with dark-theme syntax colours.
 | **Console** | Interactive shell, Jupyter/IPython console, command history, multi-shell support |
 | **Browser** | Embedded web browser, URL navigation, in-page search |
 | **Plugins** | Custom syntax highlighting, UI translations, run configurations, auto-discovery |
-| **UI** | Dark/light themes (Qt Material) with matching editor colours, configurable keyboard shortcuts, font customization, dockable panels, system tray, toolbar, status bar |
+| **UI** | Activity bar, side bar, bottom panel and secondary side bar with a remembered layout; built-in dark/light themes (plus Qt Material) with matching editor colours, configurable keyboard shortcuts, font customization, dockable panels, system tray, toolbar, status bar |
 | **i18n** | English, Traditional Chinese, Simplified Chinese, Japanese; follows the system language, switches without restarting, extensible via plugins |
 | **Files** | Auto-save, multi-encoding support (UTF-8, GBK, Latin-1, etc.), recent files, multi-file session restore |
 
@@ -292,7 +317,7 @@ Core dependencies are installed automatically:
 | Package | Purpose |
 |---|---|
 | PySide6 | GUI framework (Qt for Python) |
-| qt-material | Dark/light material themes |
+| qt-material | The optional Material window themes |
 | yapf | Python code formatting (Google style) |
 | jedi | Python auto-completion & analysis |
 | ruff | Fast Python linter |
@@ -323,7 +348,7 @@ from je_editor import start_editor
 start_editor()
 ```
 
-The editor launches maximized with a dark amber theme by default.
+The editor launches maximized with the JEditor Dark theme by default.
 
 The parts of the editor that are not widgets — the workspace, open documents and diagnostics, plus
 the interfaces for language services, debugging, task execution, remote sessions and AI providers
@@ -470,11 +495,12 @@ and installed from within the editor. See [Plugin Development](#plugin-developme
 
 ### Theming & Customization
 
-- **Dark/Light themes** -- Qt Material themes; the editor's own colours follow the window style.
+- **Window layout** -- An activity bar switches the side bar between Explorer, Outline, Run and Debug, Testing and TODO; clicking the current view's icon hides the side bar. The panel below the editor holds Output, Problems, Terminal, Source Control, Debug Console, Format Check and Variables, and the AI chat opens in a secondary side bar on the right. The file tree and the output are shared by every tab: a file clicked in the Explorer opens in a tab of its own, and switching tabs keeps the tree where it was. `Ctrl+Shift+B`, ``Ctrl+` `` and `Ctrl+Alt+I` toggle the three areas, and the **View** menu lists every view. Which areas are open, the view each shows and their sizes are remembered between sessions.
+- **Dark/Light themes** -- JEditor Dark (the default) and JEditor Light are built in and style every part of the window; the Qt Material themes remain in **UI Style**. The editor's own colours follow the window style, and the toolbar and activity bar icons are redrawn to match.
 - **Font customization** -- Change font family and size for the editor and UI independently.
-- **Dockable panels** -- Rearrange the UI layout by docking/undocking panels.
+- **Dockable panels** -- Any panel can also be opened as a dock from the **Dock** menu and docked or floated wherever you like.
 - **System tray** -- Minimize the editor to the system tray.
-- **Toolbar** -- JetBrains-style quick action buttons, including the current Git branch.
+- **Toolbar** -- Quick action buttons for files, run, debug, search and the Git branch; the status bar shows the current branch too.
 
 ### Multi-Language UI
 
@@ -523,6 +549,10 @@ and installed from within the editor. See [Plugin Development](#plugin-developme
 | `Ctrl+Alt+E` | Recent locations |
 | `Ctrl+Alt+\` | Toggle split view |
 | `Ctrl+Alt+M` | Toggle minimap |
+| `Ctrl+Shift+B` | Toggle the side bar |
+| ``Ctrl+` `` | Toggle the bottom panel |
+| `Ctrl+Alt+I` | Toggle the secondary side bar (AI chat) |
+| `Ctrl+Shift+E` | Show the Explorer |
 | `F7` / `Shift+F7` | Next / previous change |
 | `Ctrl+Alt+Z` | Revert the change at the caret |
 | `Ctrl+Alt+B` | Toggle inline blame |
@@ -672,7 +702,7 @@ JEDITOR stores user settings in a `.jeditor/` directory inside the working direc
 
 | File | Content |
 |---|---|
-| `user_setting.json` | General preferences (font, theme, language, recent files, open tabs, reassigned shortcuts) |
+| `user_setting.json` | General preferences (font, theme, language, recent files, open tabs, reassigned shortcuts, window layout) |
 | `user_color_setting.json` | Editor and output colours, including syntax highlighting |
 | `snippets.json` | Your own snippets, merged over the built-in sets |
 | `ai_config.json` | AI assistant settings, grouped by provider — written only when you tick saving in the AI settings dialog, since it holds the key as plain text |

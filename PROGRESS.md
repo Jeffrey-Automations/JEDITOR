@@ -11,6 +11,10 @@
   `# 初始化並記錄日誌` 被當成「註解掉的程式碼」。這是本專案雙語註解的正常寫法，不該刪。
   要清掉這一項得在 SonarCloud 把 issue 轉成 False Positive（用 API 改狀態需要 Administer
   Issues 權限）。
+- **#26** `image/screenshot-browser.png` 還是舊視窗的樣子。其他截圖是以 offscreen 重拍的（U-20261115-03），但
+  QtWebEngine 在 offscreen 下畫不出網頁內容（分頁標題有載入，畫面是空白），這一張要在真正的螢幕上開視窗才拍得到。
+  另外並排差異檢視器的行號區底色是寫死的淺灰（`line_number_code_viewer.py`），在內建深色主題下很突兀，
+  應該改用 `actually_color_dict` 的行號顏色。
 - **#21** 〔未確認〕整套測試在機器忙碌時偶爾被 Qt 中止（`Fatal Python error: Aborted`，結束代碼 3）。
   2026-10-08 看到兩次，都是主工作樹裡同時還有別的 pytest 行程在跑的時候；其中一次留有紀錄，停在
   `test_toolbar_actions.py::TestTheBranchScan::test_a_subdirectory_still_finds_the_repository` 的 setup，
@@ -27,10 +31,12 @@
 M0（`je_editor/core/` 服務層）、M2（診斷模型與 Tree-sitter 語法引擎）、M3（工作區與多根專案）、M5（AI 供應者）已完成，M4（DAP 除錯）已完成，見 `docs/updates/2026-10.md`。
 以下依相依關係排序。
 
-- **#9** M1（UI 重新設計、指令與快捷鍵、語系補齊）。可以先做不改變外觀的部分：每個指令有不隨翻譯
-  變動的 ID。語系那一項大部分已經有了：四份字典的鍵與佔位符的 parity、空白值、退回英文都
-  由 `test/test_languages.py` 在 CI 守著；還沒做的是「語系載入改成資料驅動」。〔決定〕UI 的版面方向
-  （活動列、編輯區、側邊面板、底部面板）要先定，才能動視窗層。
+- **#9** M1 剩下的部分。版面方向已定（VS Code 式）並完成外框與內建主題，見 U-20261115-01。還沒做的：
+  每個指令有不隨翻譯變動的 ID（目前只有快捷鍵表與面板有 ID，選單指令仍以文字辨識，換語言靠反查）；
+  語系載入改成資料驅動；外框還沒有的部分——全專案搜尋仍是對話框而不是側邊欄的面板、分頁沒有「預覽」
+  狀態（在檔案總管每點一個檔案就多一個分頁）、面板不能在各區之間拖動、Git 用戶端因為是並排介面所以
+  放在下方面板而不是側邊欄（要放進側邊欄得另做一個窄版的變更清單）。另外 `Workbench` 有六百多行，
+  之後加功能前先把「版面的存取」拆出去。
 - **#23** M2 沒有涵蓋的部分（語法引擎與高亮已完成，見 U-20261008-08）：語法樹目前只用來上色。大綱
   （`utils/symbols`）、折疊（`utils/code_folding`）與智慧選取（`utils/selection`）仍然用各自的分析，
   還沒有改用 `SyntaxSession.regions()`；編輯器是直接向引擎要 session，沒有經過 `DocumentStore`，

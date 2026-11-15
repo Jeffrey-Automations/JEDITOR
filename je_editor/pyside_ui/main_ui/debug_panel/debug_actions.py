@@ -24,6 +24,7 @@ from je_editor.pyside_ui.main_ui.debug_panel.debug_panel_widget import DebugPane
 from je_editor.pyside_ui.main_ui.workspace.workspace_roots import primary_root_path
 from je_editor.utils.debugger.attach_address import parse_address
 from je_editor.utils.multi_language.multi_language_wrapper import language_wrapper
+from je_editor.utils.shell.shell_views import VIEW_DEBUG
 
 DOCK_NAME = "debug_panel"
 _PANEL_ATTRIBUTE = "debug_panel"
@@ -174,7 +175,11 @@ def show_debug_panel(main_window: object) -> None:
     :param main_window: 主視窗 / the main window
     """
     from je_editor.pyside_ui.main_ui.menu.dock_menu.build_dock_menu import add_dock_widget
+    from je_editor.pyside_ui.main_ui.shell.workbench import reveal_view
 
+    # 視窗有外框時，除錯面板是側邊欄的一個面板 / With a shell, the debug panel is a side bar view
+    if reveal_view(main_window, VIEW_DEBUG):
+        return
     panel = getattr(main_window, _PANEL_ATTRIBUTE, None)
     if isinstance(panel, DebugPanelWidget) and shiboken6.isValid(panel):
         dock = panel.parentWidget()

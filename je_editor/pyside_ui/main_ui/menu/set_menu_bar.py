@@ -10,6 +10,7 @@ from je_editor.pyside_ui.main_ui.menu.plugin_menu.build_plugin_menu import set_p
 from je_editor.pyside_ui.main_ui.menu.style_menu.build_style_menu import set_style_menu
 from je_editor.pyside_ui.main_ui.menu.tab_menu.build_tab_menu import set_tab_menu
 from je_editor.pyside_ui.main_ui.menu.text_menu.build_text_menu import set_text_menu
+from je_editor.pyside_ui.main_ui.menu.view_menu.build_view_menu import set_view_menu
 from je_editor.utils.logging.loggin_instance import jeditor_logger
 
 # 啟用未來註解功能，允許型別提示使用字串前向參照
@@ -54,6 +55,7 @@ def set_menu_bar(ui_we_want_to_set: EditorMain) -> None:
     set_check_menu(ui_we_want_to_set)  # 程式碼檢查選單 / Code style check menu
     set_help_menu(ui_we_want_to_set)  # 幫助選單 / Help menu
     set_venv_menu(ui_we_want_to_set)  # Python 虛擬環境選單 / Python venv menu
+    set_view_menu(ui_we_want_to_set)  # 檢視選單 / View menu
     set_tab_menu(ui_we_want_to_set)  # 分頁選單 / Tab menu
     set_dock_menu(ui_we_want_to_set)  # Dock 視窗選單 / Dock menu
     set_style_menu(ui_we_want_to_set)  # 介面樣式選單 / Style menu

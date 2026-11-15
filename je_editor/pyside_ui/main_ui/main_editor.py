@@ -39,6 +39,9 @@ from je_editor.pyside_ui.main_ui.save_settings.user_setting_file import (
     read_user_setting,
     write_user_setting
 )
+from je_editor.pyside_ui.main_ui.shell.shell_icons import themed_icon
+from je_editor.pyside_ui.main_ui.shell.ui_style import apply_ui_style
+from je_editor.pyside_ui.main_ui.shell.workbench import Workbench
 from je_editor.pyside_ui.main_ui.system_tray.extend_system_tray import ExtendSystemTray
 from je_editor.pyside_ui.main_ui.workspace.workspace_roots import (
     remember_extra_roots, restore_extra_roots
@@ -61,7 +64,12 @@ from je_editor.utils.multi_language.multi_language_wrapper import (
     language_wrapper, resolve_startup_language
 )
 from je_editor.utils.redirect_manager.redirect_manager_class import redirect_manager_instance
+from je_editor.utils.theme.ui_stylesheet import EDITOR_TABS_NAME, STATUS_ITEM_NAME
+from je_editor.utils.theme.ui_theme import DEFAULT_STYLE
 from je_editor.plugins.plugin_loader import load_external_plugins
+
+# 狀態列上分支圖示的邊長（像素）/ The edge of the status bar's branch icon, in pixels
+_STATUS_ICON_SIZE = 14
 
 # 定義一個字典，用來存放可擴充的 Tab (標籤頁)
 # Define a dictionary to store extendable tabs
@@ -166,12 +174,22 @@ class EditorMain(QMainWindow, QtStyleTools):
         # 建立 TabWidget (多分頁編輯器)
         # Create TabWidget (multi-tab editor)
         self.tab_widget = QTabWidget()
+        self.tab_widget.setObjectName(EDITOR_TABS_NAME)
+        self.tab_widget.setDocumentMode(True)
+        self.tab_widget.setMovable(True)
         self.tab_widget.setTabsClosable(True)  # 可關閉分頁 / Tabs closable
         self.tab_widget.setAttribute(Qt.WidgetAttribute.WA_AlwaysShowToolTips, on=False)
         self.tab_widget.tabCloseRequested.connect(self.close_tab)
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
         self._prev_editor_widget = None  # 追蹤前一個分頁 / Track previous tab for signal disconnect
         self._session_restored = False  # 分頁只還原一次 / Restore tabs only once per window
+
+        # 外框：活動列、側邊欄、下方面板與第二側邊欄，編輯分頁放在中間。要在第一個
+        # 編輯分頁之前建好，分頁才會用視窗共用的檔案樹與輸出面板
+        # The shell: activity bar, side bar, bottom panel and secondary side bar,
+        # with the editor tabs in the middle. It is built before the first editor
+        # tab so the tabs use the window's shared file tree and output views
+        self.workbench = Workbench(self, self.tab_widget)
 
         # 計時器會在後面初始化並連接 redirect
         # Timer will be initialized later with redirect connection
@@ -193,6 +211,12 @@ class EditorMain(QMainWindow, QtStyleTools):
 
         # 設定狀態列 (語言、行尾、編碼、行/列位置)
         # Setup status bar (language, line ending, encoding, line/column)
+        self._branch_icon_label = QLabel()
+        self.status_branch_label = QLabel()
+        self.status_branch_label.setObjectName(STATUS_ITEM_NAME)
+        self.statusBar().addWidget(self._branch_icon_label)
+        self.statusBar().addWidget(self.status_branch_label)
+        self.set_status_branch("")
         self._language_label = QLabel(PLAIN_TEXT)
         self._line_ending_label = QLabel("LF")
         self._encoding_label = QLabel("UTF-8")
@@ -257,13 +281,13 @@ class EditorMain(QMainWindow, QtStyleTools):
         for widget_name, widget in EDITOR_EXTEND_TAB.items():
             self.tab_widget.addTab(widget(), widget_name)
 
-        # 設定中央元件為 TabWidget
-        # Set central widget as TabWidget
-        self.setCentralWidget(self.tab_widget)
-
         # 啟動時讀取設定
         # Load startup settings
         self.startup_setting()
+
+        # 還原上次的版面（哪些區域開著、各自多寬）
+        # Restore the layout from last time: which areas were open and how wide
+        self.workbench.restore_layout()
 
         # 如果是 debug 模式，10 秒後自動關閉
         # If debug mode, auto-close after 10 seconds
@@ -275,21 +299,26 @@ class EditorMain(QMainWindow, QtStyleTools):
 
     def clear_code_result(self) -> None:
         """
-        清除目前編輯器的輸出結果
-        Clear the current editor's output result
+        清除輸出面板
+        Clear the output view
         """
         jeditor_logger.info("EditorMain clear_code_result")
-        widget = self.tab_widget.currentWidget()
-        if isinstance(widget, EditorWidget):
-            widget.code_result.clear()
+        self.workbench.output.code_result.clear()
 
-    def _first_editor_widget(self) -> EditorWidget | None:
-        """取得第一個 EditorWidget 分頁 / Return the first EditorWidget tab (if any)."""
-        for i in range(self.tab_widget.count()):
-            w = self.tab_widget.widget(i)
-            if isinstance(w, EditorWidget):
-                return w
-        return None
+    def set_status_branch(self, branch: str) -> None:
+        """
+        在狀態列顯示目前的 Git 分支
+        Show the current Git branch in the status bar.
+
+        :param branch: 分支名稱；空字串表示不在儲存庫裡，這時整個項目收起來
+            the branch's name; an empty string means no repository, and hides the item
+        """
+        self._branch_icon_label.setPixmap(
+            themed_icon("source_control", size=_STATUS_ICON_SIZE).pixmap(
+                _STATUS_ICON_SIZE, _STATUS_ICON_SIZE))
+        self.status_branch_label.setText(branch)
+        self._branch_icon_label.setVisible(bool(branch))
+        self.status_branch_label.setVisible(bool(branch))
 
     @staticmethod
     def _drain_queue(q: "queue.Queue") -> list[str]:
@@ -321,13 +350,10 @@ class EditorMain(QMainWindow, QtStyleTools):
         if not has_stdout and not has_stderr:
             return
 
-        widget = self.tab_widget.currentWidget()
-        if not isinstance(widget, EditorWidget):
-            widget = self._first_editor_widget()
-            if widget is None:
-                return
-
-        text_cursor = widget.code_result.textCursor()
+        # 輸出面板是整個視窗共用的，所以沒有開著任何編輯分頁時訊息也不會掉
+        # The output view belongs to the whole window, so a message is not lost
+        # when no editor tab is open
+        text_cursor = self.workbench.output.code_result.textCursor()
         if has_stdout:
             self._append_coloured_output(
                 text_cursor, self._drain_queue(redirect_manager_instance.std_out_queue),
@@ -386,13 +412,25 @@ class EditorMain(QMainWindow, QtStyleTools):
 
         self._restore_open_files_session()
 
-        app = QApplication.instance()
-        style_name = user_setting_dict.get("ui_style", "dark_amber.xml")
-        if app is not None:
-            self.apply_stylesheet(app, style_name)
+        self.apply_style(user_setting_dict.get("ui_style", DEFAULT_STYLE))
+
+    def apply_style(self, style_name: str) -> None:
+        """
+        把一個樣式套用到視窗：視窗樣式、編輯器自己畫的顏色與圖示
+        Apply a style to the window: the window style, the colours the editor paints itself, and the icons.
+
+        樣式選單、啟動流程與宿主程式都呼叫這裡；不會改動設定裡的 ``ui_style``。
+        The Style menu, the startup and a host application all call this; the
+        ``ui_style`` setting is left as it is.
+
+        :param style_name: 內建主題的名字，或 qt-material 的樣式檔名
+            a built-in theme's name, or a qt-material style file name
+        """
+        apply_ui_style(self, style_name)
         # 顏色跟著樣式走：淺色樣式要用淺色底調出來的那一組
         # The colours follow the style: a light one needs the light set
         apply_theme_colors(style_name)
+        self.set_status_branch(self.status_branch_label.text())
 
     def _open_file_paths(self) -> list[str]:
         """取得所有分頁目前開啟的檔案 / Every tab's currently open file."""
@@ -555,6 +593,7 @@ class EditorMain(QMainWindow, QtStyleTools):
         """
         try:
             self._save_open_files_session()
+            self.workbench.save_layout()
             write_user_setting()
             write_user_color_setting()
         except Exception as e:
@@ -562,19 +601,15 @@ class EditorMain(QMainWindow, QtStyleTools):
 
     def _on_workspace_changed(self, workspace: Workspace) -> None:
         """
-        工作區的根目錄變了：記進設定，並更新每個編輯分頁的檔案樹
-        The workspace's roots changed: record them, and update each editor tab's file tree.
+        工作區的根目錄變了：記進設定，並更新檔案樹
+        The workspace's roots changed: record them, and update the file tree.
 
         :param workspace: 變動後的工作區 / the workspace after the change
         """
         remember_extra_roots(workspace)
-        tab_widget = getattr(self, "tab_widget", None)
-        if tab_widget is None:
-            return
-        for index in range(tab_widget.count()):
-            widget = tab_widget.widget(index)
-            if isinstance(widget, EditorWidget):
-                widget.refresh_project_roots()
+        workbench = getattr(self, "workbench", None)
+        if workbench is not None:
+            workbench.explorer.refresh_roots()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """
@@ -587,6 +622,7 @@ class EditorMain(QMainWindow, QtStyleTools):
         # 必須在關閉分頁前記錄，否則分頁已消失就抓不到開啟中的檔案
         # Must run before the tabs close, or the open files are already gone
         self._save_open_files_session()
+        self.workbench.save_layout()
         # 關閉所有編輯器分頁（停止自動儲存和檔案監控）
         # Close all editor tabs (stop auto-save and file watchers)
         for i in range(self.tab_widget.count() - 1, -1, -1):
@@ -600,6 +636,9 @@ class EditorMain(QMainWindow, QtStyleTools):
             stop_background_threads
         )
         stop_background_threads()
+        # 外框的面板各自收掉自己的執行緒與子程序
+        # Each of the shell's views stops its own threads and child processes
+        self.workbench.close_views()
         # 還在等回覆的 AI 請求先取消，再放掉服務持有的資源
         # Cancel AI requests still waiting for a reply, then release what the services hold
         cancel_chat_workers()

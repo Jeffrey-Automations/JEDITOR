@@ -59,6 +59,14 @@ class TestSplitEditorView:
         view.close()
         view.deleteLater()
 
+    def test_it_takes_the_main_editors_own_font_styling(self, source):
+        # The document is shared, so a split view in another font redraws the
+        # main editor in that font too.
+        source.setStyleSheet("font-family: monospace; font-size: 11pt;")
+        view = SplitEditorView(source)
+        assert view.styleSheet() == source.styleSheet()
+        view.close()
+
     def test_closing_releases_the_shared_document(self, source):
         view = SplitEditorView(source)
         view.close()

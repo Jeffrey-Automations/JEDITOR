@@ -4,6 +4,10 @@
 JEditor 的核心是一個功能強大的多分頁程式碼編輯器，基於 Qt 的 ``QPlainTextEdit`` 打造，
 專為速度、靈活性和流暢的開發體驗而設計。
 
+.. image:: image/screenshot-minimap-split-view.png
+   :alt: 開著縮圖與分割檢視的編輯器
+   :align: center
+
 多分頁編輯
 -----------
 

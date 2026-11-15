@@ -3,6 +3,10 @@ Code Quality & Formatting
 
 JEditor integrates multiple code quality tools to help you write clean, consistent code.
 
+.. image:: image/screenshot-problems-panel.png
+   :alt: The Problems view listing ruff diagnostics
+   :align: center
+
 YAPF Python Formatting
 -----------------------
 

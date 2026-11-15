@@ -30,7 +30,8 @@ user_setting.json
      - UI 語言（``English``、``Traditional Chinese``、``Simplified Chinese``、
        ``Japanese`` 或插件提供的語言）。首次啟動時取自系統地區設定。
    * - ``ui_style``
-     - UI 主題樣式檔，例如 ``dark_amber.xml``
+     - 視窗主題： ``jeditor_dark`` （預設）或 ``jeditor_light`` ，或 qt-material 的樣式檔，
+       例如 ``dark_amber.xml``
    * - ``encoding``
      - 預設檔案編碼（``utf-8``、``GBK``、``latin-1``）
    * - ``last_file``
@@ -54,6 +55,9 @@ user_setting.json
        ``classic`` 則每一種語言都用原本以樣式比對的高亮器
    * - ``shortcuts``
      - 使用者改過的快捷鍵；只記錄與預設值不同的項目
+   * - ``shell_layout``
+     - 視窗版面：側邊欄、下方面板與第二側邊欄是否開著、各自顯示哪個面板，以及大小。
+       缺少或損壞的值會逐欄退回預設版面
 
 user_color_setting.json
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -117,15 +121,43 @@ AI 助手設定（詳見 :doc:`ai_assistant`），以供應者分組。每個供
 另外記錄目前選用的供應者。與上面兩個檔案不同，編輯器預設不會寫入這個檔案——只有在 AI 設定
 對話框勾選存檔時才會寫入，因為裡面的金鑰是明文。您也可以自行建立它。
 
+視窗版面
+---------
+
+視窗最左邊是活動列，周圍分成四區：
+
+- **側邊欄** （左）——檔案總管、大綱、執行與除錯、測試與待辦事項。活動列在它們之間切換，
+  點目前面板的圖示會收起側邊欄
+- **編輯分頁** （中）——每個檔案一個分頁，標題是檔名，提示顯示完整路徑
+- **下方面板** ——輸出、問題、終端機、原始檔控制、除錯主控台、格式檢查與變數
+- **第二側邊欄** （右）——AI 聊天
+
+檔案樹與輸出類的面板屬於視窗，而不是某個分頁：在檔案總管點一個檔案會開在自己的分頁
+（空白且沒改過的分頁會直接拿來用），切換分頁時檔案樹與輸出維持原狀。檔案總管與輸出類
+以外的面板，等到第一次顯示才建立。
+
+**檢視** 選單可以開關每一區，並列出每一個面板。哪些區域開著、各自顯示哪個面板與大小，
+會存成 ``shell_layout`` ，下次啟動時還原。任何面板仍然可以從 **Dock** 選單開成浮動視窗。
+
+.. image:: image/screenshot-outline-panel.png
+   :alt: 側邊欄顯示大綱面板
+   :align: center
+
 主題
 -----
 
-JEditor 透過 `qt-material <https://github.com/UN-GCPCS/qt-material>`_ 支援深色和淺色主題：
+JEditor 內建兩個主題 **JEditor Dark** 與 **JEditor Light** ，視窗的每個部分都由它們上色。
+`qt-material <https://github.com/UN-GCPDS/qt-material>`_ 的深色與淺色樣式仍然可以選用：
 
-- **預設：** Dark Amber 主題
-- 從 **UI Style** 選單切換主題
+- **預設：** JEditor Dark（ ``jeditor_dark`` ）。設定裡已經指定 qt-material 樣式的專案會維持原樣
+- 從 **UI Style** 選單切換主題；內建主題列在最前面
+- 工具列與活動列的圖示會以新主題的顏色重畫
 - 編輯器本身的顏色會跟隨視窗樣式：切換到淺色主題時，行號區、目前行與語法顏色也會換成
   淺色的一組。您自己挑過的顏色不會被蓋掉——只有仍是預設值的項目會跟著主題走
+
+.. image:: image/screenshot-light-theme.png
+   :alt: JEditor Light 主題
+   :align: center
 
 字型自訂
 ---------

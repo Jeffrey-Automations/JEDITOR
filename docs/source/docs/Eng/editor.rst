@@ -4,6 +4,10 @@ Code Editor
 JEditor's core is a powerful multi-tab code editor built on top of Qt's ``QPlainTextEdit``, designed
 for speed, flexibility, and a smooth development experience.
 
+.. image:: image/screenshot-minimap-split-view.png
+   :alt: The editor with the minimap and a split view
+   :align: center
+
 Multi-Tab Editing
 ------------------
 

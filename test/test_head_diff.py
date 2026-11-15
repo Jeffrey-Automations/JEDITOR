@@ -156,3 +156,42 @@ class TestStagedDiffTab:
         window = _window_with(editor)
         assert add_head_diff_tab(window) is False
         assert window.tab_widget.added == []
+
+
+class TestTheViewerShowsAnEditorsOwnDiff:
+    """
+    The editor's diff against HEAD has no ``diff --git`` line, only the two file headers.
+
+    The viewer split a diff on that line alone, so this one was dropped whole and
+    the Diff Against HEAD tab opened empty.
+    """
+
+    @pytest.fixture()
+    def viewer(self, qapp):
+        from je_editor.pyside_ui.git_ui.code_diff_compare.multi_file_diff_viewer import (
+            MultiFileDiffViewer
+        )
+        made = MultiFileDiffViewer()
+        yield made
+        made.deleteLater()
+
+    def test_it_gets_one_tab_named_after_the_file(self, viewer):
+        viewer.set_diff_text(unified_diff_text("a = 1\n", "a = 2\n", "main.py"))
+        assert viewer.tabs.count() == 1
+        assert viewer.tabs.tabText(0) == "main.py"
+
+    def test_a_diff_without_any_header_still_shows(self, viewer):
+        viewer.set_diff_text("@@ -1 +1 @@\n-a = 1\n+a = 2\n")
+        assert [viewer.tabs.tabText(index) for index in range(viewer.tabs.count())] == ["diff"]
+
+    def test_a_git_diff_is_still_split_by_file(self, viewer):
+        viewer.set_diff_text(
+            "diff --git a/one.py b/one.py\n--- a/one.py\n+++ b/one.py\n@@ -1 +1 @@\n-a\n+b\n"
+            "diff --git a/two.py b/two.py\n--- a/two.py\n+++ b/two.py\n@@ -1 +1 @@\n-c\n+d\n")
+        assert [viewer.tabs.tabText(index) for index in range(viewer.tabs.count())] == \
+            ["one.py", "two.py"]
+
+    def test_no_diff_means_no_tab(self, viewer):
+        viewer.set_diff_text("")
+        assert viewer.tabs.count() == 0
+
