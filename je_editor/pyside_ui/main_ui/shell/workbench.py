@@ -252,6 +252,45 @@ class Workbench(QObject):
                 spec.view_id, spec.icon or VIEW_EXPLORER, title,
                 at_bottom=spec.area == AREA_SECONDARY)
         self._views[spec.view_id] = spec
+        self._add_view_menu_entry(spec)
+
+    def add_view(self, view_id: str, area: str, factory: ViewFactory | None = None,
+                 widget: QWidget | None = None, *, title_key: str = "", icon: str = "",
+                 title: str = "") -> None:
+        """
+        以一般引數登記一個面板，宿主程式不必匯入 ``ViewSpec``
+        Register a view from plain arguments, so a host application need not import ``ViewSpec``.
+
+        :param view_id: 不隨翻譯變動的 ID / the ID, which no translation changes
+        :param area: ``"side"``、``"bottom"`` 或 ``"secondary"`` / ``"side"``, ``"bottom"`` or ``"secondary"``
+        :param factory: 第一次顯示時建立內容的函式 / the function that builds the content on the first showing
+        :param widget: 已經建好的內容；與 ``factory`` 擇一 / content already built, given instead of ``factory``
+        :param title_key: 標題在語系字典裡的鍵，換語言時跟著換 / the title's key in
+            the language dictionary, which follows a language change
+        :param icon: 活動列的圖示名稱，見 ``ui_icons`` / the activity bar icon's name, see ``ui_icons``
+        :param title: 沒有翻譯鍵時直接用的標題 / the title used as it is when there is no key
+        :raises ValueError: 區域不對、ID 已經登記過，或沒有內容時
+            for an unknown area, an ID already registered, or nothing to show
+        """
+        self.register_view(
+            ViewSpec(view_id, area, title_key=title_key, icon=icon, title=title), factory, widget)
+
+    def _add_view_menu_entry(self, spec: ViewSpec) -> None:
+        """
+        檢視選單已經建好的話，替後來登記的面板補上一個項目
+        Give a view registered after the View menu was built an entry in it.
+
+        內建面板登記時選單還不存在，它們的項目由選單自己建立。
+        The menu does not exist yet when the built-in views are registered, and
+        builds their entries itself.
+        """
+        menu = getattr(self._window, "view_menu", None)
+        if menu is None:
+            return
+        action = QAction(view_title(spec, language_wrapper.language_word_dict), menu)
+        action.triggered.connect(
+            lambda _checked=False, wanted=spec.view_id: self.show_view(wanted))
+        menu.addAction(action)
 
     def view_ids(self, area: str | None = None) -> tuple[str, ...]:
         """

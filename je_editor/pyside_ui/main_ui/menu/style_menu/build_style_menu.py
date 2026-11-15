@@ -131,16 +131,17 @@ def set_style(ui_we_want_to_set: EditorMain, action: QAction) -> None:
     # Update user settings dictionary to persist the chosen style. This comes
     # before applying it: redrawing the icons reads this very setting
     user_setting_dict.update({"ui_style": style_name})
-    apply_ui_style(ui_we_want_to_set, style_name)
-
-    # 編輯器自己畫的顏色也要跟著換，否則淺色樣式配深色底調出來的標記會看不清楚
-    # The colours the editor paints itself follow along, or a light style would
-    # be left with markers tuned for a dark background
-    apply_theme_colors(style_name)
-    refresh_branch = getattr(ui_we_want_to_set, "set_status_branch", None)
-    label = getattr(ui_we_want_to_set, "status_branch_label", None)
-    if callable(refresh_branch) and label is not None:
-        refresh_branch(label.text())
+    apply_to_window = getattr(ui_we_want_to_set, "apply_style", None)
+    if callable(apply_to_window):
+        apply_to_window(style_name)
+    else:
+        # 沒有這個方法的宿主視窗：樣式與編輯器自己畫的顏色分開套用，否則淺色樣式
+        # 配深色底調出來的標記會看不清楚
+        # A host window without the method: the style and the colours the editor
+        # paints itself are applied separately, or a light style would be left
+        # with markers tuned for a dark background
+        apply_ui_style(ui_we_want_to_set, style_name)
+        apply_theme_colors(style_name)
     _repaint_editors(ui_we_want_to_set)
 
 

@@ -412,7 +412,20 @@ class EditorMain(QMainWindow, QtStyleTools):
 
         self._restore_open_files_session()
 
-        style_name = user_setting_dict.get("ui_style", DEFAULT_STYLE)
+        self.apply_style(user_setting_dict.get("ui_style", DEFAULT_STYLE))
+
+    def apply_style(self, style_name: str) -> None:
+        """
+        把一個樣式套用到視窗：視窗樣式、編輯器自己畫的顏色與圖示
+        Apply a style to the window: the window style, the colours the editor paints itself, and the icons.
+
+        樣式選單、啟動流程與宿主程式都呼叫這裡；不會改動設定裡的 ``ui_style``。
+        The Style menu, the startup and a host application all call this; the
+        ``ui_style`` setting is left as it is.
+
+        :param style_name: 內建主題的名字，或 qt-material 的樣式檔名
+            a built-in theme's name, or a qt-material style file name
+        """
         apply_ui_style(self, style_name)
         # 顏色跟著樣式走：淺色樣式要用淺色底調出來的那一組
         # The colours follow the style: a light one needs the light set

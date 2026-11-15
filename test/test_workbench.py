@@ -178,6 +178,17 @@ class TestAddingAView:
         assert workbench.bottom_panel.currentWidget() is page
         assert workbench.bottom_panel.tabText(workbench.bottom_panel.currentIndex()) == "Report"
 
+    def test_a_host_can_add_a_view_from_plain_arguments(self, workbench):
+        page = QLabel("nav")
+        workbench.add_view("navigation", "side", widget=page, icon="navigation",
+                           title_key="view_explorer")
+        assert workbench.show_view("navigation") is page
+        assert workbench.view_spec("navigation").area == AREA_SIDE
+
+    def test_an_unknown_area_is_refused(self, workbench):
+        with pytest.raises(ValueError):
+            workbench.add_view("floating", "elsewhere", widget=QLabel())
+
     def test_an_id_cannot_be_registered_twice(self, workbench):
         with pytest.raises(ValueError):
             workbench.register_view(ViewSpec(VIEW_EXPLORER, AREA_SIDE), lambda: QLabel())
@@ -430,6 +441,13 @@ class TestTheViewMenu:
         assert workbench.is_view_shown(VIEW_TERMINAL)
         texts = [action.text() for action in view_menu.actions()]
         assert len(texts) == len(set(texts))
+
+    def test_a_view_added_later_gets_an_entry(self, view_menu, workbench):
+        workbench.add_view("report", "bottom", widget=QLabel("report"), title="Report")
+        entry = next(action for action in view_menu.actions() if action.text() == "Report")
+        workbench.set_bottom_panel_visible(False)
+        entry.trigger()
+        assert workbench.is_view_shown("report")
 
     def test_its_shortcuts_are_reserved_for_the_window(self, view_menu):
         from je_editor.utils.shortcuts.shortcut_registry import (

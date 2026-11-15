@@ -231,7 +231,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `theme/theme_colors.py` | 175 | 編輯器自己畫的顏色：qt-material 用的深 / 淺兩組，加上內建主題各一組（行號區與目前行貼著編輯區底色）；換主題時保留使用者自訂的顏色 |
 | `theme/ui_theme.py` | 163 | 內建視窗主題的色票（`DARK_TOKENS` / `LIGHT_TOKENS`）與樣式名稱的判斷：`is_builtin_style()`、`is_light_style()`、`tokens_for()`、樣式選單要列的 `style_choices()`、預設樣式 `DEFAULT_STYLE` |
 | `theme/ui_stylesheet.py` | 233 | `build_stylesheet(tokens, image_urls)`：一份 QSS 範本，深淺只差代進去的色票；外框元件的物件名稱（`ActivityBar`、`SideBar`…）也定義在這裡，元件與樣式共用 |
-| `theme/ui_icons.py` | 122 | 外框與工具列的線條圖示，以 SVG 文字存放（不必另外打包），顏色是代進去的：`icon_svg(name, color, size)` |
+| `theme/ui_icons.py` | 123 | 外框與工具列的線條圖示，以 SVG 文字存放（不必另外打包），顏色是代進去的：`icon_svg(name, color, size)` |
 | `shell/shell_views.py` | 114 | 外框有哪些面板、各在哪一區：`ViewSpec`、`BUILTIN_VIEWS`、三個區域（`side` / `bottom` / `secondary`）與面板 ID 常數 |
 | `shell/layout_state.py` | 132 | 外框的版面狀態 `ShellLayout`（哪些區域開著、顯示哪個面板、多寬）與它在設定檔裡的讀寫：壞掉的值逐欄退回預設、指向不存在面板的欄位換回預設面板 |
 
@@ -328,7 +328,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
-| `main_editor.py` | 682 | `EditorMain(QMainWindow)`：建立外框（`self.workbench`）與分頁容器、輸出重導計時器、狀態列更新、設定定期儲存、工作階段還原 / 儲存、關閉時收尾；`EDITOR_EXTEND_TAB` 掛載點 |
+| `main_editor.py` | 695 | `EditorMain(QMainWindow)`：建立外框（`self.workbench`）與分頁容器、套用樣式（`apply_style()`：視窗樣式、編輯器顏色與圖示一起換）、輸出重導計時器、狀態列更新、設定定期儲存、工作階段還原 / 儲存、關閉時收尾；`EDITOR_EXTEND_TAB` 掛載點 |
 | `editor/editor_widget.py` | 578 | `EditorWidget`：一個編輯分頁。視窗有外框時分頁裡只有 `CodeEditor`，檔案樹與輸出面板是視窗共用的那一組，`project_treeview`、`code_result`、`git_gui`、`code_difference_result` 等屬性只是指向它們；沒有外框的宿主視窗裡仍是「左側專案樹 + 上方 `CodeEditor` + 下方輸出分頁」，自己建一組。分頁標題是檔名，完整路徑在提示與物件名稱裡。含拖放開檔、外部變更偵測、縮圖與分割檢視切換。所有開檔都經 `open_an_file()`：讀不了時 `report_open_failure()` 告訴使用者並撤掉「已開啟」紀錄；外部變更後重新載入用檔案自己的編碼 |
 | `editor/editor_widget_dock.py` | 85 | `FullEditorWidget`：可停駐的單檔編輯器；關閉時只在有修改時，以檔案原本的編碼與行尾存回 |
 | `editor/process_input.py` | 104 | 對子程序（program / shell / debugger）送入標準輸入的視窗 |
@@ -344,7 +344,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
-| `shell/workbench.py` | 619 | `Workbench(QObject)`：建立兩層分隔器並設為中央元件、登記面板（`register_view(spec, factory | widget)`，宿主程式與外掛也用它）、顯示 / 切換（`show_view`、`toggle_view`、三個區域的開關）、版面的取得 / 套用 / 存入設定 / 還原、從檔案樹開檔（空白分頁就地開，否則開新分頁）、換語言、關閉時讓每個面板收尾。`workbench_of(window)` 與 `reveal_view(window, view_id)` 讓其他模組不必知道面板在哪一區 |
+| `shell/workbench.py` | 658 | `Workbench(QObject)`：建立兩層分隔器並設為中央元件、登記面板（`register_view(spec, factory | widget)`；宿主程式與外掛用不必匯入 `ViewSpec` 的 `add_view(view_id, area, ...)`，選單建好之後才登記的面板會在檢視選單補上一項）、顯示 / 切換（`show_view`、`toggle_view`、三個區域的開關）、版面的取得 / 套用 / 存入設定 / 還原、從檔案樹開檔（空白分頁就地開，否則開新分頁）、換語言、關閉時讓每個面板收尾。`workbench_of(window)` 與 `reveal_view(window, view_id)` 讓其他模組不必知道面板在哪一區 |
 | `shell/activity_bar.py` | 112 | `ActivityBar(QToolBar)`：不能移動的直式工具列，每個側邊欄面板一個可勾選的圖示，第二側邊欄的排在最下面 |
 | `shell/view_container.py` | 188 | `ViewContainer`（標題 + 一疊面板）與 `LazyPage`：面板第一次顯示時才呼叫工廠函式建立，並包在可捲動區域裡；建立失敗只留下空頁 |
 | `shell/explorer_panel.py` | 97 | `ExplorerPanel`：工作區的檔案樹（只顯示名稱欄）與多根目錄時的選單；整個視窗共用一份 |
@@ -375,7 +375,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `tab_menu/build_tab_tools_menu.py` | 155 | 工具分頁：IPython、變數檢視器、FrontEngine、AI 對話、TODO 面板、大綱面板 |
 | `dock_menu/build_dock_menu.py` | 253 | 各種 dock 視窗的建立（含 FrontEngine 元件） |
 | `view_menu/build_view_menu.py` | 72 | 檢視選單：開關側邊欄 / 下方面板 / 第二側邊欄，以及每個內建面板一個「顯示」項目；全部只是呼叫 `Workbench` 的方法 |
-| `style_menu/build_style_menu.py` | 182 | 樣式切換（內建主題在前，接著是 qt-material 的樣式；樣式名稱放在動作的 data）、縮排參考線 / 尾端空白開關、開啟快捷鍵設定 |
+| `style_menu/build_style_menu.py` | 183 | 樣式切換（內建主題在前，接著是 qt-material 的樣式；樣式名稱放在動作的 data）、縮排參考線 / 尾端空白開關、開啟快捷鍵設定 |
 | `language_menu/build_language_server.py` | 96 | 介面語言切換（含插件註冊的語言） |
 | `python_env_menu/build_venv_menu.py` | 243 | 建立 venv、pip 安裝 / 升級、選擇直譯器 |
 | `plugin_menu/build_plugin_menu.py` | 162 | 依已註冊插件建立「關於 / 執行」子選單，並開啟插件瀏覽器 |

@@ -161,10 +161,11 @@ Plugin browser (pyside_ui/main_ui/plugin_browser/) → github_api.fetch_repo_tre
   `plugin_browser/github_api.py`, which restricts URL schemes and blocks path traversal.
 - **Extra tabs**: `EDITOR_EXTEND_TAB` in `je_editor/pyside_ui/main_ui/main_editor.py`, read once
   during `EditorMain.__init__`.
-- **Shell views**: `window.workbench.register_view(ViewSpec(view_id, area, title_key=..., icon=...,
-  title=...), factory)` adds a view to the side bar (`side`), the bottom panel (`bottom`) or the
-  secondary side bar (`secondary`); a side or secondary view gets an activity bar icon. The factory
-  runs the first time the view is shown; pass `widget=` instead for one already built.
+- **Shell views**: `window.workbench.add_view(view_id, area, factory, title_key=..., icon=...,
+  title=...)` (or `register_view(ViewSpec(...), factory)`) adds a view to the side bar (`"side"`),
+  the bottom panel (`"bottom"`) or the secondary side bar (`"secondary"`); a side or secondary view
+  gets an activity bar icon, and a view added after the menus are built gets a View menu entry. The
+  factory runs the first time the view is shown; pass `widget=` instead for one already built.
 - **Window themes**: the token sets in `utils/theme/ui_theme.py` and the one QSS template in
   `utils/theme/ui_stylesheet.py`. `apply_ui_style(window, style_name)`
   (`pyside_ui/main_ui/shell/ui_style.py`) is the only place a style is applied: a built-in name
@@ -211,10 +212,11 @@ Plugin browser (pyside_ui/main_ui/plugin_browser/) → github_api.fetch_repo_tre
   before you move or rename a module. It merges its UI strings by mutating the exported
   `english_word_dict` and `traditional_chinese_word_dict` in place. Treat these names,
   `EditorMain`'s constructor and the attributes PyBreeze uses (`tab_widget`, `menu`, `help_menu`,
-  `dock_menu`, `run_menu`, `workbench` with its `register_view`, `show_view`, `explorer` and
-  `output`, and `EditorWidget.project_treeview`, which in a window with a shell is the one tree
+  `dock_menu`, `run_menu`, `workbench` with its `add_view`, `show_view`, `restore_layout`,
+  `view_spec`, and `EditorWidget.project_treeview`, which in a window with a shell is the one tree
   every tab shares) as a contract. PyBreeze applies a theme by setting `ui_style` and calling
-  `startup_setting()`, or `apply_ui_style()` directly. PyBreeze calls `CodeEditor.reset_highlighter()` after changing a tab's file and
+  `startup_setting()`, falling back to `EditorMain.apply_style(style_name)`. The icon name
+  `navigation` in `utils/theme/ui_icons.py` is PyBreeze's activity bar icon. PyBreeze calls `CodeEditor.reset_highlighter()` after changing a tab's file and
   after `register_programming_language()`; the keywords it registers for `.json` and YAML suffixes
   are laid over whichever highlighter colours those files. `EditorMain` also sets `services`;
   PyBreeze does not use that name today. **PyBreeze keeps contract tests of its own**,
