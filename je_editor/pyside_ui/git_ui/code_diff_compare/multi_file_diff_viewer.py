@@ -2,6 +2,11 @@ from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from je_editor.pyside_ui.git_ui.code_diff_compare.side_by_side_diff_widget import SideBySideDiffWidget
 
+# unified diff 裡新檔案那一行的開頭 / What the new file's line of a unified diff starts with
+_NEW_FILE_HEADER = "+++ "
+# 取不到檔名時分頁的標題 / The tab's title when no file name can be found
+_UNNAMED_DIFF = "diff"
+
 
 class MultiFileDiffViewer(QWidget):
     """
@@ -61,11 +66,33 @@ class MultiFileDiffViewer(QWidget):
             else:
                 current.append(line)
 
-        # 最後一個檔案也要加入結果
-        if current and file_name:
-            chunks.append((file_name, "\n".join(current)))
+        # 最後一個檔案也要加入結果。沒有 "diff --git" 標頭的 diff（編輯器自己比出來
+        # 的「與 HEAD 的差異」）是單一檔案，檔名從 "+++" 那一行取；以前這種 diff
+        # 會整個被丟掉，分頁開出來是空的
+        # The last file joins the result too. A diff with no "diff --git" header
+        # -- the editor's own diff against HEAD -- is a single file, named from
+        # its "+++" line; such a diff used to be dropped whole, leaving the tab empty
+        if current:
+            chunks.append((file_name or self._name_from_header(current), "\n".join(current)))
 
         return chunks
+
+    @staticmethod
+    def _name_from_header(lines: list[str]) -> str:
+        """
+        從 unified diff 的 "+++" 標頭取出檔名
+        Take the file name from a unified diff's "+++" header.
+
+        :param lines: 一個檔案的 diff / one file's diff
+        :return: 檔名；沒有標頭時為 ``diff`` / the file name, or ``diff`` with no header
+        """
+        for line in lines:
+            if line.startswith(_NEW_FILE_HEADER):
+                # "+++ b/name.py (working copy)" 或 "+++ b/name.py<TAB>時間"
+                # "+++ b/name.py (working copy)" or "+++ b/name.py<TAB>timestamp"
+                name = line[len(_NEW_FILE_HEADER):].split("\t")[0].split(" (")[0].strip()
+                return name.removeprefix("b/") or _UNNAMED_DIFF
+        return _UNNAMED_DIFF
 
     def set_dark_theme(self) -> None:
         """

@@ -33,6 +33,12 @@ class SplitEditorView(QPlainTextEdit):
         super().__init__(parent)
         self.setDocument(source_editor.document())
         self.setFont(source_editor.font())
+        # 主編輯器的字型是用它自己的樣式表設定的；不一起帶過來的話，這個檢視會套到
+        # 視窗的介面字型，而文件是共用的，連主編輯器都會跟著變成那個字型
+        # The main editor's font is set by its own style sheet. Left behind, this
+        # view takes the window's interface font, and since the document is
+        # shared the main editor is redrawn in that font as well
+        self.setStyleSheet(source_editor.styleSheet())
         self.setLineWrapMode(source_editor.lineWrapMode())
         self.setTabStopDistance(
             QFontMetricsF(source_editor.font()).horizontalAdvance(" " * 8))
