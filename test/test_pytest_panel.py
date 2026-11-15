@@ -392,14 +392,18 @@ class TestAFinishedRun:
         self._run_to_the_end(panel, qtbot)
         assert panel.run_button is not None
 
-    def test_a_thread_that_is_not_the_current_one_does_not_clear_it(self, panel):
+    def test_a_thread_still_running_is_kept(self, panel):
         from je_editor.pyside_ui.main_ui.test_panel.test_panel_widget import PytestRunThread
-        current, stale = PytestRunThread("."), PytestRunThread(".")
-        panel._thread = current
-        panel._release_thread(stale)
-        assert panel._thread is current
+        waiting = PytestRunThread(".")
+        panel._thread = waiting
+        panel._run_threads.append(waiting)
+        panel._release_finished_threads()
+        # Never started, so not finished: it is neither dropped nor deleted.
+        assert panel._thread is waiting
+        assert panel._run_threads == [waiting]
         panel._thread = None
-        current.deleteLater()
+        panel._run_threads.clear()
+        waiting.deleteLater()
 
 
 class TestFiltering:

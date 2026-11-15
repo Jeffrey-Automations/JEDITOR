@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -8,7 +9,7 @@ from PySide6.QtWidgets import (
     QPushButton, QComboBox, QListWidget, QListWidgetItem, QPlainTextEdit,
     QLineEdit, QSizePolicy, QSplitter, QFileDialog, QMessageBox, QInputDialog, QMenuBar
 )
-from git import Repo, InvalidGitRepositoryError, NoSuchPathError, GitCommandError
+from git import Repo, InvalidGitRepositoryError, GitCommandError
 
 from je_editor.git_client.git_action import GitService
 from je_editor.utils.logging.loggin_instance import jeditor_logger
@@ -72,10 +73,76 @@ class GitChangeItem:
         self.status = status  # 狀態，例如 'untracked', 'modified', 'deleted', 'renamed', 'staged'
 
 
+def read_repository_state(repository: Repo) -> "RepositoryState":
+    """
+    讀出面板要顯示的儲存庫狀態
+    Read what the panel shows of a repository.
+
+    每一步都會叫起 git 子程序，所以在背景執行緒呼叫。
+    Every step starts a git child process, so this is called on a background thread.
+
+    :param repository: 已開啟的儲存庫 / the open repository
+    :return: 分支與變更 / the branches and the changes
+    :raises git.GitCommandError: git 回報錯誤時 / when git reports an error
+    """
+    detached = repository.head.is_detached
+    current = (repository.head.commit.hexsha[:_SHORT_HASH_LENGTH] if detached
+               else repository.active_branch.name)
+    return RepositoryState(
+        heads=[head.name for head in repository.heads],
+        current=current,
+        detached=detached,
+        untracked=list(repository.untracked_files),
+        unstaged=GitGui._build_unstaged_changes(repository),
+        staged=GitGui._build_staged_changes(repository),
+    )
+
+
+# detached HEAD 時顯示的提交雜湊長度 / How much of the commit hash a detached HEAD shows
+_SHORT_HASH_LENGTH = 8
+
+
+@dataclass(frozen=True)
+class RepositoryState:
+    """
+    面板要顯示的儲存庫狀態，在背景執行緒讀好再交給畫面
+    What the panel shows of a repository, read on a background thread and handed to the GUI.
+
+    :param heads: 本地分支名稱 / the local branch names
+    :param current: 目前分支；detached 時是提交雜湊的前幾碼 / the current
+        branch, or the start of the commit hash when detached
+    :param detached: HEAD 是否 detached / whether HEAD is detached
+    :param untracked: 未追蹤的檔案 / the untracked files
+    :param unstaged: 未暫存的變更 / the unstaged changes
+    :param staged: 已暫存的變更 / the staged changes
+    """
+
+    heads: list[str] = field(default_factory=list)
+    current: str = ""
+    detached: bool = False
+    untracked: list[str] = field(default_factory=list)
+    unstaged: list[GitChangeItem] = field(default_factory=list)
+    staged: list[GitChangeItem] = field(default_factory=list)
+
+
 class GitGui(QWidget):
+    # 背景工作的結果：(要呼叫的函式, 要給它的值)。由背景執行緒送出，在畫面執行緒收
+    # A background job's outcome: (the function to call, the value to give it).
+    # Sent from the background thread and received on the GUI thread
+    _background_result = Signal(object, object)
+
     def __init__(self) -> None:
         super().__init__()
+        self._background_result.connect(self._deliver_background_result)
+        self._bg_threads: list[tuple[QThread, _GitWorker]] = []
         self.current_repo: Repo | None = None
+        # 每開一個儲存庫加一；背景讀回來的結果若不是這一代的就丟掉
+        # Raised for each repository opened; a background read from an earlier one is dropped
+        self._repository_generation = 0
+        # 是否有一次狀態讀取在跑，以及跑完後要不要再讀一次
+        # Whether a state read is under way, and whether another is wanted after it
+        self._state_read_running = False
+        self._state_read_wanted = False
         # stash 與衝突處理走的服務層，開啟儲存庫後才建立
         # The service layer stashing and conflicts use, built once a repo is open
         self._git_service: GitService | None = None
@@ -87,6 +154,19 @@ class GitGui(QWidget):
         """
         在背景執行緒中執行 Git 操作，避免阻塞主執行緒
         Run Git operation in background thread to avoid blocking UI
+
+        ``on_done`` 與 ``on_error`` 會在畫面執行緒上被呼叫。worker 的訊號是在背景
+        執行緒送出的，直接接一個普通函式的話，那個函式就在背景執行緒上跑，而它們
+        做的事是更新元件——所以結果先經過這個面板自己的訊號，由 Qt 排回畫面執行緒。
+        ``on_done`` and ``on_error`` are called on the GUI thread. The worker's
+        signals are sent from the background thread, and a plain function
+        connected to one runs right there, yet what these do is update widgets --
+        so the outcome goes through a signal of this panel first, which Qt queues
+        back onto the GUI thread.
+
+        :param func: 在背景執行的函式 / the function run in the background
+        :param on_done: 成功時以結果呼叫 / called with the result on success
+        :param on_error: 失敗時以錯誤訊息呼叫 / called with the error message on failure
         """
         thread = QThread(self)
         # 具名執行緒：萬一它在執行中被銷毀，Qt 的中止訊息才說得出是哪一條
@@ -97,19 +177,39 @@ class GitGui(QWidget):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         if on_done:
-            worker.finished.connect(on_done)
+            worker.finished.connect(lambda result: self._background_result.emit(on_done, result))
         if on_error:
-            worker.error.connect(on_error)
+            worker.error.connect(lambda message: self._background_result.emit(on_error, message))
         # 清理執行緒 / Cleanup thread
         worker.finished.connect(thread.quit)
         worker.error.connect(thread.quit)
-        thread.finished.connect(thread.deleteLater)
-        thread.start()
+        thread.finished.connect(self._release_finished_threads)
         # 保持引用避免被垃圾回收 / Keep references to prevent GC
-        if not hasattr(self, '_bg_threads'):
-            self._bg_threads = []
-        self._bg_threads = [(t, w) for t, w in self._bg_threads if t.isRunning()]
         self._bg_threads.append((thread, worker))
+        thread.start()
+
+    @staticmethod
+    def _deliver_background_result(callback: Callable, payload: object) -> None:
+        """在畫面執行緒上把背景工作的結果交給它的回呼 / Hand a background job's outcome to its callback, on the GUI thread."""
+        callback(payload)
+
+    def _release_finished_threads(self) -> None:
+        """
+        跑完的執行緒從清單拿掉，再交給 Qt 刪除
+        Drop the finished threads from the list, then hand them to Qt for deletion.
+
+        以前是先排刪除、下次再問清單裡每一條「還在跑嗎」；那時問到的可能已經是
+        刪掉的物件。
+        They used to be scheduled for deletion first and asked later whether they
+        were still running, by which time the object asked could already be deleted.
+        """
+        running = []
+        for thread, worker in self._bg_threads:
+            if thread.isFinished():
+                thread.deleteLater()
+            else:
+                running.append((thread, worker))
+        self._bg_threads = running
 
     def _init_ui(self) -> None:
         # === Top controls / 上方控制區 ===
@@ -263,19 +363,50 @@ class GitGui(QWidget):
         """
         Load a Git repository from a given folder.
         從指定資料夾載入 Git 儲存庫。
+
+        開啟儲存庫與讀取分支、變更都在背景執行緒做；讀完之前控制項是停用的。大的
+        儲存庫或網路磁碟上這要花上一段時間，不能讓畫面等它。
+        Opening the repository and reading its branches and changes happen on a
+        background thread, with the controls disabled until they are read. On a
+        large repository or a network drive that takes a while, which the window
+        must not wait for.
         """
         # 換了儲存庫：先關掉上一個，它的常駐子程序才不會留著
         # A different repository: close the previous one so its long-lived child
         # processes do not stay behind
         self._close_repositories()
-        try:
-            self.current_repo = Repo(selected_directory_path)
-            if self.current_repo.bare:
-                # 不支援 bare repo
-                raise InvalidGitRepositoryError(f"Bare repository not supported: {selected_directory_path}")
-        except (InvalidGitRepositoryError, NoSuchPathError) as e:
+        self._repository_generation += 1
+        generation = self._repository_generation
+        self._update_ui_controls(False)
+        self.repo_path_label.setText(f"Repository: {selected_directory_path}")
+
+        def open_and_read() -> tuple[Repo, RepositoryState]:
+            repository = Repo(selected_directory_path)
+            try:
+                if repository.bare:
+                    # 不支援 bare repo
+                    raise InvalidGitRepositoryError(
+                        f"Bare repository not supported: {selected_directory_path}")
+                return repository, read_repository_state(repository)
+            except Exception:
+                repository.close()
+                raise
+
+        def on_done(result: tuple[Repo, RepositoryState]) -> None:
+            repository, state = result
+            if generation != self._repository_generation:
+                # 這段時間又開了別的儲存庫 / Another repository was opened meanwhile
+                repository.close()
+                return
+            self.current_repo = repository
+            self._show_state(state)
+            self._update_ui_controls(True)
+
+        def on_error(message: str) -> None:
+            if generation != self._repository_generation:
+                return
             # 如果不是合法的 Git repo，顯示錯誤訊息並重置 UI
-            QMessageBox.critical(self, "Error", f"Not a valid git repository:\n{e}")
+            QMessageBox.critical(self, "Error", f"Not a valid git repository:\n{message}")
             self.current_repo = None
             self._update_ui_controls(False)
             self.repo_path_label.setText("Repository: (none)")
@@ -283,37 +414,98 @@ class GitGui(QWidget):
             self.changes_list_widget.clear()
             self.diff_viewer.setPlainText("")
             self.repo_status_label.setText(_REPO_STATUS_DEFAULT)
-            return
 
-        # 成功載入 repo，更新 UI
-        self.repo_path_label.setText(f"Repository: {selected_directory_path}")
-        self._refresh_branch_list()
-        self._refresh_change_list()
-        self._update_ui_controls(True)
+        self._run_git_in_background(open_and_read, on_done, on_error)
 
     def _refresh_branch_list(self) -> None:
         """
         Refresh branch list in the combo box.
         更新分支清單。
         """
+        self._refresh_state()
+
+    def _refresh_state(self) -> None:
+        """
+        在背景重新讀取分支與變更，讀完再更新畫面
+        Read the branches and changes again in the background, and update the panel once read.
+
+        一次操作之後通常會連續要求好幾次（分支一次、變更一次）；它們會併成一次
+        讀取，而讀取途中再來的要求會在讀完後補讀一次。
+        One operation usually asks several times in a row, once for the branches
+        and once for the changes; these become a single read, and a request that
+        arrives during a read is answered by one more read after it.
+        """
         if not self.current_repo:
             self.branch_selector.clear()
+            self.changes_list_widget.clear()
+            self.diff_viewer.setPlainText("")
+            self.repo_status_label.setText(_REPO_STATUS_DEFAULT)
             return
+        if self._state_read_wanted:
+            return
+        self._state_read_wanted = True
+        QTimer.singleShot(0, self, self._start_state_read)
 
-        heads = [h.name for h in self.current_repo.heads]
+    def _start_state_read(self) -> None:
+        """開始一次狀態讀取，已經有一次在跑就等它跑完 / Start a state read, or wait for the one under way."""
+        repository = self.current_repo
+        if repository is None or self._state_read_running or not self._state_read_wanted:
+            return
+        self._state_read_wanted = False
+        self._state_read_running = True
+        generation = self._repository_generation
+
+        def finished() -> None:
+            self._state_read_running = False
+            if self._state_read_wanted:
+                QTimer.singleShot(0, self, self._start_state_read)
+
+        def on_done(state: RepositoryState) -> None:
+            if generation == self._repository_generation and self.current_repo is repository:
+                self._show_state(state)
+            finished()
+
+        def on_error(message: str) -> None:
+            jeditor_logger.warning("git_client_gui.py could not read the repository state: %s", message)
+            finished()
+
+        self._run_git_in_background(lambda: read_repository_state(repository), on_done, on_error)
+
+    def _show_state(self, state: RepositoryState) -> None:
+        """
+        把讀到的狀態顯示出來：分支選單、變更清單與狀態列
+        Show a state that was read: the branch list, the change list and the status line.
+
+        :param state: 背景讀到的狀態 / the state read in the background
+        """
         self.branch_selector.clear()
-        self.branch_selector.addItems(heads)
-
-        # 設定目前分支
-        try:
-            current = self.current_repo.active_branch.name
-            idx = self.branch_selector.findText(current)
-            if idx >= 0:
-                self.branch_selector.setCurrentIndex(idx)
-        except TypeError:
+        self.branch_selector.addItems(state.heads)
+        if state.detached:
             # Detached HEAD 狀態
             self.branch_selector.setEditable(True)
-            self.branch_selector.setEditText(self.current_repo.head.commit.hexsha[:8])
+            self.branch_selector.setEditText(state.current)
+        else:
+            index = self.branch_selector.findText(state.current)
+            if index >= 0:
+                self.branch_selector.setCurrentIndex(index)
+
+        self.changes_list_widget.clear()
+        self._add_section_header("— Untracked —")
+        for path in state.untracked:
+            self._add_change_item(GitChangeItem(path, "untracked"))
+        self._add_section_header("— Unstaged —")
+        for item in state.unstaged:
+            self._add_change_item(item)
+        self._add_section_header("— Staged —")
+        for item in state.staged:
+            self._add_change_item(item)
+
+        branch_name = "(detached)" if state.detached else state.current
+        self.repo_status_label.setText(
+            f"Status: Branch: {branch_name}\n"
+            f"Untracked: {len(state.untracked)} | Unstaged: {len(state.unstaged)} | "
+            f"Staged: {len(state.staged)}")
+        self.diff_viewer.setPlainText("Select files to stage/unstage.")
 
     def on_branch_selection_changed(self) -> None:
         """
@@ -498,45 +690,9 @@ class GitGui(QWidget):
         list_item.setFlags(list_item.flags() & ~Qt.ItemFlag.ItemIsSelectable & ~Qt.ItemFlag.ItemIsEnabled)
         self.changes_list_widget.addItem(list_item)
 
-    def _update_repo_status_summary(self, repository: "Repo",
-                                    untracked: list, unstaged: list, staged: list) -> None:
-        """更新 repo 狀態文字 / Update repo status summary label."""
-        if repository.head.is_detached:
-            branch_name = "(detached)"
-        else:
-            branch_name = repository.active_branch.name
-        summary = (
-            f"Branch: {branch_name}\n"
-            f"Untracked: {len(untracked)} | Unstaged: {len(unstaged)} | Staged: {len(staged)}"
-        )
-        self.repo_status_label.setText(f"Status: {summary}")
-
     def _refresh_change_list(self) -> None:
         """收集工作目錄與索引的變更並更新清單 / Refresh the change list UI."""
-        if not self.current_repo:
-            self.changes_list_widget.clear()
-            self.diff_viewer.setPlainText("")
-            self.repo_status_label.setText(_REPO_STATUS_DEFAULT)
-            return
-
-        repository = self.current_repo
-        untracked_files = list(repository.untracked_files)
-        unstaged_changes = self._build_unstaged_changes(repository)
-        staged_changes = self._build_staged_changes(repository)
-
-        self.changes_list_widget.clear()
-        self._add_section_header("— Untracked —")
-        for path in untracked_files:
-            self._add_change_item(GitChangeItem(path, "untracked"))
-        self._add_section_header("— Unstaged —")
-        for item in unstaged_changes:
-            self._add_change_item(item)
-        self._add_section_header("— Staged —")
-        for item in staged_changes:
-            self._add_change_item(item)
-
-        self._update_repo_status_summary(repository, untracked_files, unstaged_changes, staged_changes)
-        self.diff_viewer.setPlainText("Select files to stage/unstage.")
+        self._refresh_state()
 
     def _add_change_item(self, change: GitChangeItem) -> None:
         """
@@ -709,13 +865,14 @@ class GitGui(QWidget):
         as fetch takes a while.
         """
         self.update_commit_status_timer.stop()
-        for thread, _worker in getattr(self, "_bg_threads", []):
+        for thread, _worker in self._bg_threads:
             try:
                 if thread.isRunning():
                     thread.quit()
                     thread.wait()
+                thread.deleteLater()
             except RuntimeError:
-                # 它已經跑完並被刪除了 / It already finished and was deleted
+                # 它已經被刪除了 / It was already deleted
                 continue
         self._bg_threads = []
         # 開著的儲存庫也要關：每一個都帶著常駐的 git 子程序

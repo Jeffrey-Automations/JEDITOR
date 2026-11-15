@@ -33,6 +33,12 @@ from je_editor.utils.theme.ui_theme import DEFAULT_STYLE, Tokens, is_builtin_sty
 # whatever the QSS does not reach -- a tree's arrows, a check box -- still
 # follows the theme
 _BASE_STYLE = "Fusion"
+# 應用程式上記著「底層樣式已經設過」的屬性。setStyle 會把每個元件重新拋光一次，
+# 元件多的時候要一秒以上，而且全在畫面執行緒上，所以同一個樣式不設第二次
+# The application property recording that the base style is already set.
+# setStyle re-polishes every widget, over a second with many of them and all of
+# it on the GUI thread, so the same style is never set twice
+_BASE_STYLE_PROPERTY = "jeditor_base_style"
 
 # 分頁關閉鈕的邊長（像素）/ The edge of a tab's close button, in pixels
 _CLOSE_ICON_SIZE = 16
@@ -40,6 +46,9 @@ _CLOSE_ICON_SIZE = 16
 # QSS 用到的圖檔放在這個行程專用的暫存資料夾，結束時刪掉
 # The image files the QSS refers to live in a temporary folder of this process, removed at exit
 _image_directory: Path | None = None
+# 已經寫好圖檔的樣式；同一個樣式再套用時不必再寫一次檔
+# The styles whose images are already written, so applying one again writes no file
+_written_images: dict[str, dict[str, str]] = {}
 
 
 def _image_folder() -> Path:
@@ -61,12 +70,16 @@ def write_theme_images(tokens: Tokens, style_name: str) -> dict[str, str]:
     :return: 圖檔名稱對應路徑（正斜線）/ image name mapped to its path, with forward slashes
     :raises OSError: 寫不進暫存資料夾時 / when the temporary folder cannot be written
     """
+    written = _written_images.get(style_name)
+    if written is not None:
+        return dict(written)
     urls: dict[str, str] = {}
     for name, colour in ((IMAGE_TAB_CLOSE, tokens["text_muted"]),
                          (IMAGE_TAB_CLOSE_HOVER, tokens["text"])):
         target = _image_folder() / f"{style_name}_{name}.svg"
         target.write_text(icon_svg("close", colour, _CLOSE_ICON_SIZE), encoding="utf-8")
         urls[name] = target.as_posix()
+    _written_images[style_name] = dict(urls)
     return urls
 
 
@@ -147,7 +160,9 @@ def apply_ui_style(window: QWidget | None, style_name: str | None) -> bool:
     jeditor_logger.info(f"ui_style.py apply_ui_style {name}")
     tokens = tokens_for(name)
     if is_builtin_style(name):
-        app.setStyle(_BASE_STYLE)
+        if app.property(_BASE_STYLE_PROPERTY) != _BASE_STYLE:
+            app.setStyle(_BASE_STYLE)
+            app.setProperty(_BASE_STYLE_PROPERTY, _BASE_STYLE)
         app.setPalette(build_palette(tokens))
         app.setStyleSheet(_builtin_stylesheet(tokens, name))
     else:

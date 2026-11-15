@@ -402,6 +402,25 @@ class TestApplyingAStyle:
         assert DARK_TOKENS["editor_background"] in qapp.styleSheet()
         assert qapp.palette().window().color().name() == DARK_TOKENS["surface"]
 
+    def test_the_base_style_is_set_only_once(self, qapp, window):
+        # setStyle re-polishes every widget on the GUI thread: over a second in a full window.
+        apply_ui_style(window, STYLE_DARK)
+        with patch.object(QApplication, "setStyle") as set_style:
+            apply_ui_style(window, STYLE_LIGHT)
+            apply_ui_style(window, STYLE_DARK)
+        set_style.assert_not_called()
+
+    def test_an_icon_is_drawn_once_for_a_set_of_colours(self, qapp):
+        first = themed_icon("run", DARK_TOKENS)
+        assert themed_icon("run", DARK_TOKENS).cacheKey() == first.cacheKey()
+        assert themed_icon("run", LIGHT_TOKENS).cacheKey() != first.cacheKey()
+
+    def test_a_styles_images_are_written_once(self, qapp):
+        urls = write_theme_images(DARK_TOKENS, STYLE_DARK)
+        with patch("pathlib.Path.write_text") as written:
+            assert write_theme_images(DARK_TOKENS, STYLE_DARK) == urls
+        written.assert_not_called()
+
     def test_the_light_theme_replaces_the_dark_one(self, qapp, window):
         apply_ui_style(window, STYLE_DARK)
         apply_ui_style(window, STYLE_LIGHT)

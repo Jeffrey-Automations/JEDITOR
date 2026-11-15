@@ -12,6 +12,8 @@ again -- no separate list has to be kept.
 """
 from __future__ import annotations
 
+from functools import lru_cache
+
 from PySide6.QtCore import QByteArray, QObject, Qt
 from PySide6.QtGui import QAction, QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
@@ -72,13 +74,28 @@ def themed_icon(name: str, tokens: Tokens | None = None, size: int = ICON_CANVAS
     :raises KeyError: 沒有這個圖示時 / when no icon has that name
     """
     colours = tokens or current_tokens()
+    return _drawn_icon(name, colours["text_muted"], colours["text"], colours["text_disabled"], size)
+
+
+@lru_cache(maxsize=None)
+def _drawn_icon(name: str, muted: str, text: str, disabled: str, size: int) -> QIcon:
+    """
+    畫出一個圖示；同一組顏色只畫一次
+    Draw one icon, once per set of colours.
+
+    畫圖只能在畫面執行緒上做，所以每個圖示每組顏色畫過就留著：換回用過的主題、
+    或啟動時先建立再重畫，都不會再畫第二次。
+    Drawing has to happen on the GUI thread, so what is drawn is kept: going back
+    to a theme used before, or building an icon and then redrawing it at startup,
+    draws nothing a second time.
+    """
     icon = QIcon()
     states = (
-        (colours["text_muted"], QIcon.Mode.Normal, QIcon.State.Off),
-        (colours["text"], QIcon.Mode.Normal, QIcon.State.On),
-        (colours["text"], QIcon.Mode.Active, QIcon.State.Off),
-        (colours["text"], QIcon.Mode.Active, QIcon.State.On),
-        (colours["text_disabled"], QIcon.Mode.Disabled, QIcon.State.Off),
+        (muted, QIcon.Mode.Normal, QIcon.State.Off),
+        (text, QIcon.Mode.Normal, QIcon.State.On),
+        (text, QIcon.Mode.Active, QIcon.State.Off),
+        (text, QIcon.Mode.Active, QIcon.State.On),
+        (disabled, QIcon.Mode.Disabled, QIcon.State.Off),
     )
     for colour, mode, state in states:
         for scale in _SCALES:
