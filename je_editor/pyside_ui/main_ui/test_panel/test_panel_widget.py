@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_editor.pyside_ui.main_ui.workspace.workspace_roots import primary_root_path
+from je_editor.utils.child_process.child_environment import child_environment
 from je_editor.utils.logging.loggin_instance import jeditor_logger
 from je_editor.utils.multi_language.multi_language_wrapper import language_wrapper
 from je_editor.utils.test_runner.pytest_output import (
@@ -97,6 +98,7 @@ class PytestRunThread(QThread):
             completed = subprocess.run(  # nosemgrep  # noqa: S603  # nosec B603
                 pytest_command(self._node_ids, self._with_coverage),
                 cwd=self._working_dir,
+                env=child_environment(),
                 capture_output=True,
                 text=True,
                 encoding="utf-8",

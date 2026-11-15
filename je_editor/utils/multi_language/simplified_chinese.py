@@ -285,6 +285,9 @@ simplified_chinese_word_dict = {
     "variable_inspector_var_name": "变量名",
     "variable_inspector_var_type": "类型",
     "variable_inspector_var_value": "值",
+    "variable_inspector_source_console": "IPython 控制台（值可以编辑）",
+    "variable_inspector_source_debugger": "调试器，暂停在 {frame}（只读）",
+    "variable_inspector_source_none": "目前没有可显示的变量。请打开 IPython 控制台，或让调试器停在断点。",
     # Dynamic Console
     "dynamic_console_title": "动态控制台",
     "dynamic_console_run": "运行",

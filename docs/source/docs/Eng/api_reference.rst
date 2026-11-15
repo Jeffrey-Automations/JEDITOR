@@ -71,6 +71,30 @@ Use ``EDITOR_EXTEND_TAB`` to add custom tabs to JEditor:
 
 See :doc:`how_to_extend_using_pyside` for a complete example.
 
+The Environment of the Programs the Editor Starts
+---------------------------------------------------
+
+A program started from the editor (Run, the debugger, the shell, the terminal, the test
+panel) inherits the editor's own environment. An application that embeds JEditor and sets
+variables for its own process can keep them out of the user's programs by registering a
+function that returns the environment a child should get:
+
+.. code-block:: python
+
+   import os
+   from je_editor import set_child_environment_provider
+
+   def without_my_own_variables() -> dict[str, str]:
+       return {name: value for name, value in os.environ.items() if name != "MY_APP_ONLY"}
+
+   set_child_environment_provider(without_my_own_variables)
+
+The function is called once for every program started and must return the whole
+environment, names and values as strings. If it raises, or returns something else, the
+editor's own environment is used and the fault is logged. ``set_child_environment_provider(None)``
+unregisters it, and ``je_editor.child_environment()`` returns what a child would get now.
+The tools the editor runs for itself (git, ruff, language servers) are not affected.
+
 Process Managers
 -----------------
 

@@ -10,6 +10,8 @@ from je_editor.pyside_ui.main_ui.main_editor import EditorMain
 from je_editor.pyside_ui.main_ui.save_settings.user_color_setting_file import user_setting_color_dict
 from je_editor.pyside_ui.main_ui.save_settings.user_setting_file import user_setting_dict
 from je_editor.start_editor import start_editor
+from je_editor.utils.child_process.child_environment import child_environment
+from je_editor.utils.child_process.child_environment import set_child_environment_provider
 from je_editor.utils.exception.exceptions import JEditorCantFindLanguageException
 from je_editor.utils.exception.exceptions import JEditorContentFileException
 from je_editor.utils.exception.exceptions import JEditorException
@@ -55,4 +57,6 @@ __all__ = [
     "register_plugin_run_config", "get_all_plugin_run_configs",
     "get_plugin_run_config_by_suffix",
     "register_plugin_metadata", "get_all_plugin_metadata",
+    # Host API
+    "child_environment", "set_child_environment_provider",
 ]

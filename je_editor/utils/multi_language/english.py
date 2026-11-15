@@ -294,6 +294,10 @@ please make sure that the current encoding is consistent with the default encodi
     "variable_inspector_var_name": "Variable Name",
     "variable_inspector_var_type": "Type",
     "variable_inspector_var_value": "Value",
+    "variable_inspector_source_console": "IPython console (values can be edited)",
+    "variable_inspector_source_debugger": "Debugger, paused in {frame} (read-only)",
+    "variable_inspector_source_none": (
+        "No variables to show yet. Open the IPython console, or pause the debugger at a breakpoint."),
     # Dynamic Console
     "dynamic_console_title": "Dynamic Console",
     "dynamic_console_run": "Run",

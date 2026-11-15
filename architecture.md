@@ -137,6 +137,7 @@ F9 / Run → Debug → run_debugger() (menu/run_menu/under_run_menu/build_debug_
           → LocalTaskRunner starts `python -m debugpy.adapter` → DAP handshake → program runs
       | no adapter → ExecManager runs `python -m pdb` with ProcessInput (the earlier console)
 session thread: stopped / output / replies → DebugController Qt signals → DebugPanelWidget
+                                              and → EditorMain.variable_hub → VariableInspector (the paused frame's locals)
   → frame chosen → show_execution_line() → go_to_new_tab(path) → CodeEditor.set_execution_line()
 editor shortcuts (continue, step) → CodeEditor.send_debugger_command() → controller, else pdb
 ```
@@ -219,7 +220,7 @@ Plugin browser (pyside_ui/main_ui/plugin_browser/) → github_api.fetch_repo_tre
   `navigation` in `utils/theme/ui_icons.py` is PyBreeze's activity bar icon. PyBreeze calls `CodeEditor.reset_highlighter()` after changing a tab's file and
   after `register_programming_language()`; the keywords it registers for `.json` and YAML suffixes
   are laid over whichever highlighter colours those files. `EditorMain` also sets `services`;
-  PyBreeze does not use that name today. **PyBreeze keeps contract tests of its own**,
+  PyBreeze does not use that name today. PyBreeze registers the environment of the programs the editor starts with `je_editor.set_child_environment_provider(...)` (`utils/child_process/child_environment.py`): the function is called for every start in Run, the debugger, the shell, the terminal and the test panel, and `test/test_child_environment.py` fails on a start added without `env=`. **PyBreeze keeps contract tests of its own**,
   `test/test_utils/test_jeditor_contract.py` in its repository: they pin parameter lists
   (`LspClient.start_for(file_path, servers)`, `EditorMain.close_tab(index)`,
   `FullEditorWidget.__init__`, `server_command(suffix, servers)`), private names
