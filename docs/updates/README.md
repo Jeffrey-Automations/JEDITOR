@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261115-04 | 2026-11-15 | What held the GUI thread, measured and moved off it | #perf #ui #threads | [2026-11](2026-11.md) |
 | U-20261115-03 | 2026-11-15 | Screenshots retaken for the new window; screenshots in the docs | #docs #ui | [2026-11](2026-11.md) |
 | U-20261115-02 | 2026-11-15 | Crash on closing the test panel after a run; empty Diff Against HEAD tab; split view font | #bugfix #ui | [2026-11](2026-11.md) |
 | U-20261115-01 | 2026-11-15 | Window shell and built-in themes (roadmap M1, layout part) | #done #ui #theme | [2026-11](2026-11.md) |
@@ -113,6 +114,6 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 5 |
+| [2026-11.md](2026-11.md) | 2026-11 | 6 |
 | [2026-10.md](2026-10.md) | 2026-10 | 20 |
 | [2026-09.md](2026-09.md) | 2026-09 | 20 |

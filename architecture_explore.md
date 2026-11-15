@@ -16,7 +16,7 @@ JEditor 是以 PySide6（Qt for Python）寫成的程式碼編輯器，功能涵
 | 語言 / 版本 | Python 3.11+（CI 測 3.11 ～ 3.14） |
 | UI 框架 | PySide6 6.12.0；視窗樣式是內建主題（`jeditor_dark` / `jeditor_light`，QSS 由色票組成），qt-material 的樣式仍可選 |
 | 主要相依 | `jedi`（Python 補全）、`ruff`（診斷）、`yapf` / `pycodestyle`（格式化與檢查）、`gitpython`、`watchdog`、`qtconsole` + `IPython`、`langchain_openai` + `langchain_core`、`anthropic`、`tree-sitter` 與三個文法套件（`tree-sitter-python` / `-javascript` / `-json`）、`debugpy`、`frontengine` |
-| 測試 | pytest + pytest-qt，119 個測試檔、約 21,900 行 |
+| 測試 | pytest + pytest-qt，120 個測試檔、約 21,900 行 |
 | 靜態分析 | ruff、SonarCloud（`sonar.sources=je_editor`）、Codacy、bandit |
 
 ### 各套件規模
@@ -349,8 +349,8 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `shell/view_container.py` | 188 | `ViewContainer`（標題 + 一疊面板）與 `LazyPage`：面板第一次顯示時才呼叫工廠函式建立，並包在可捲動區域裡；建立失敗只留下空頁 |
 | `shell/explorer_panel.py` | 97 | `ExplorerPanel`：工作區的檔案樹（只顯示名稱欄）與多根目錄時的選單；整個視窗共用一份 |
 | `shell/output_panels.py` | 67 | `OutputPanels`：執行結果、格式檢查、除錯輸出、終端機、變數檢視器、Git 用戶端這一組元件；外框建一組，沒有外框的編輯分頁自己建一組 |
-| `shell/shell_icons.py` | 120 | 把 `ui_icons` 的 SVG 畫成 `QIcon`（一般 / 滑過 / 選取 / 停用各一色，1x 與 2x）；`set_action_icon()` 在動作上記下圖示名稱，`refresh_action_icons()` 換主題時重畫 |
-| `shell/ui_style.py` | 157 | `apply_ui_style(window, style_name)`：內建主題走 Fusion + 調色盤 + QSS（分頁關閉鈕的圖檔寫到暫存資料夾），其餘名稱交給 qt-material；套用後重畫圖示 |
+| `shell/shell_icons.py` | 137 | 把 `ui_icons` 的 SVG 畫成 `QIcon`（一般 / 滑過 / 選取 / 停用各一色，1x 與 2x）；`set_action_icon()` 在動作上記下圖示名稱，`refresh_action_icons()` 換主題時重畫 |
+| `shell/ui_style.py` | 172 | `apply_ui_style(window, style_name)`：內建主題走 Fusion + 調色盤 + QSS（分頁關閉鈕的圖檔寫到暫存資料夾），其餘名稱交給 qt-material；套用後重畫圖示 |
 
 內建面板：側邊欄有檔案總管、大綱、執行與除錯、測試、待辦事項；下方面板有輸出、問題、終端機、
 原始檔控制（Git 用戶端是並排的介面，側邊欄放不下）、除錯主控台、格式檢查、變數；第二側邊欄是 AI 聊天。
@@ -389,14 +389,14 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `problems_panel/problems_panel_widget.py` | 410 | 問題面板：診斷放在自己的 `DiagnosticStore`，依嚴重度（錯誤 / 警告 / 資訊 / 提示）與來源篩選且順序固定、跳到該行、整專案檢查、套用可自動修正項 |
 | `problems_panel/project_lint_worker.py` | 59 | `ProjectLintWorker(QThread)`：背景對整個目錄跑 ruff |
 | `todo_panel/todo_panel_widget.py` | 296 | TODO 面板：背景掃描（`TodoScanThread`）、依標籤篩選、雙擊開檔跳行 |
-| `test_panel/test_panel_widget.py` | 410 | 測試面板：組 pytest 指令（可含覆蓋率）、`PytestRunThread` 背景執行（600 秒逾時）、結果表、traceback、只跑選取 / 只跑失敗 |
+| `test_panel/test_panel_widget.py` | 437 | 測試面板：組 pytest 指令（可含覆蓋率）、`PytestRunThread` 背景執行（600 秒逾時）、結果表、traceback、只跑選取 / 只跑失敗 |
 | `outline_panel/outline_panel_widget.py` | 215 | 大綱面板：Python 用 `ast`，其他語言問語言伺服器，點擊跳行 |
 | `command_palette/command_palette_dialog.py` | 193 | 指令面板：模糊搜尋所有選單指令並執行 |
 | `command_palette/menu_command_collector.py` | 104 | 走訪選單列蒐集可觸發動作（深度上限 8、數量上限 4000） |
 | `command_palette/quick_open_dialog.py` | 214 | 快速開啟檔案（`FileIndexThread` 背景索引），輸入 `>` 切回指令模式 |
 | `command_palette/go_to_symbol_dialog.py` | 108 | 在目前檔案中以模糊搜尋跳到符號 |
 | `console_widget/console_gui.py` | 178 | 內嵌終端機 UI：指令歷史、切換工作目錄、輸出顯示 |
-| `console_widget/qprocess_adapter.py` | 120 | `QProcess` 包裝：啟動互動 shell、Windows 切 UTF-8 code page、送指令、停止 |
+| `console_widget/qprocess_adapter.py` | 134 | `QProcess` 包裝：啟動互動 shell、Windows 切 UTF-8 code page、送指令、停止；關閉時先送 `exit` 請 shell 自己結束，不在畫面執行緒上空等 |
 | `ipython_widget/ipython_console.py` | 78 | qtconsole 的 IPython 分頁 |
 | `ai_widget/chat_ui.py` | 321 | AI 對話面板：供應者與模型選單來自 `services.ai_providers`，對話由 `core/ai` 的 `ChatSession` 保管；送出、邊收邊顯示、停止、新對話、用量與錯誤對每個供應者都是同一段程式碼 |
 | `ai_widget/chat_worker.py` | 129 | `ChatWorker(QObject)`：在 daemon 執行緒呼叫供應者，回覆片段、結果與錯誤以訊號送回 UI 執行緒；執行期間由模組層級的集合留住，面板先關掉也不會把訊號發送端刪掉 |
@@ -445,7 +445,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
-| `git_client/git_client_gui.py` | 1,070 | `GitGui`：完整 Git 面板——開 repo、分支清單與切換、變更清單（未暫存 / 已暫存）、各種 diff 呈現（新增 / 刪除 / 改名 / 已暫存 / 修改）、暫存與提交、stash、衝突解決、clone、push、未推送數量；`_GitWorker(QObject)` 背景執行；`GitDiffHighlighter` 為 diff 上色 |
+| `git_client/git_client_gui.py` | 1,227 | `GitGui`：完整 Git 面板——開啟儲存庫與重新整理都在背景讀取（`read_repository_state()` 讀出 `RepositoryState`，`_show_state()` 在畫面執行緒顯示；連續的重新整理要求併成一次），開 repo、分支清單與切換、變更清單（未暫存 / 已暫存）、各種 diff 呈現（新增 / 刪除 / 改名 / 已暫存 / 修改）、暫存與提交、stash、衝突解決、clone、push、未推送數量；`_GitWorker(QObject)` 背景執行；`GitDiffHighlighter` 為 diff 上色 |
 | `git_client/git_branch_tree_widget.py` | 151 | `GitTreeViewGUI`：提交歷史圖檢視（走 `GitCLI`），含檔案監看自動刷新 |
 | `git_client/graph_view.py` | 219 | `CommitGraphView(QGraphicsView)`：commit 圖繪製（lane 顏色、縮放、聚焦某列） |
 | `git_client/commit_table.py` | 65 | commit 清單表格 |
@@ -532,13 +532,23 @@ UI 執行緒不做 I/O 是硬性規則，重活分成三類：
 
 | 方式 | 使用者 |
 | --- | --- |
-| `QThread` + Signal | `LintWorker`、`BaselineLoader`、`BlameLoader`、`ProjectLintWorker`、`TodoScanThread`、`PytestRunThread`、`FileIndexThread`、`_SearchWorker`、`_GitBranchScan`、`_GitCheckout` |
+| `QThread` + Signal | `GitGui` 的 `_GitWorker`（開啟儲存庫、讀取分支與變更、push、未推送數）、`LintWorker`、`BaselineLoader`、`BlameLoader`、`ProjectLintWorker`、`TodoScanThread`、`PytestRunThread`、`FileIndexThread`、`_SearchWorker`、`_GitBranchScan`、`_GitCheckout` |
 | `threading.Thread` | `CodeEditSaveThread`（自動儲存）、`RuffThread`、`WatchdogThread`、`ChatWorker` 的請求執行緒（AI）、插件瀏覽器的下載 worker |
 | `QProcess` / `subprocess` | 執行使用者程式與 shell（`BaseProcessManager` 以讀取執行緒 + 佇列 + timer 拉取輸出）、終端機（`ConsoleProcessAdapter`）、ruff、pytest、git CLI |
 
 搭配的節流機制：diff 標記 400ms、lint 900ms、jedi 補全 300ms、縮圖重畫 300ms、輸出拉取 50ms、設定儲存 60s。
 
 已知地雷（`conftest.py` 與註解都有記錄）：`QThread` 若在執行中被銷毀，Qt 會 `qFatal` 直接中止行程。
+另外兩個（U-20261115-04）：
+
+- **接在背景執行緒訊號上的普通函式，是在那條背景執行緒上跑的。** 只有接到「住在畫面執行緒的 `QObject` 的方法
+  或訊號」，Qt 才會把呼叫排回畫面執行緒。要在回呼裡動元件，就讓結果先經過元件自己的訊號
+  （`GitGui._background_result`），或直接接元件的方法。
+- **不要把 `finished` 接到執行緒自己的 `deleteLater` 卻還留著引用。** 之後對它呼叫 `isRunning()` 是去碰已刪除
+  的物件，不一定丟 `RuntimeError`，可能直接讓行程當掉。跑完時從清單拿掉再刪（`_release_finished_threads`）。
+
+仍然在畫面執行緒上、而且 Qt 不允許搬走的：套用樣式表（`QApplication.setStyleSheet` 要重新拋光每個元件）、
+把文字放進編輯器並上色（`setPlainText` 與 `QSyntaxHighlighter`）。量到的數字與還能做的事記在 `PROGRESS.md` #27。
 因此每個 QThread 子類都會 `setObjectName(...)`，測試有 autouse fixture 等工具列的背景掃描結束。
 
 `core/` 自己不開執行緒。它的 `EventHook` 在發出通知的那個執行緒上呼叫訂閱者，所以之後接上來的 Qt 訂閱者要
@@ -616,7 +626,7 @@ Qt 的高亮器重畫時會送出 `textChanged`（不是 `contentsChange`），�
 
 ## 7. 測試與 CI
 
-- `test/` 119 個測試檔、約 21,900 行，與模組大致一對一（`test_fold_regions.py`、`test_shortcut_registry.py`…）。
+- `test/` 120 個測試檔、約 21,900 行，與模組大致一對一（`test_fold_regions.py`、`test_shortcut_registry.py`…）。
 - `core/` 的測試是 `test_core_*.py` 七個檔。其中 `test_core_architecture.py` 守分層：以 `ast` 走訪 `core/` 的
   匯入關係（函式內的匯入也算）、列出 UI 層以下允許向上匯入的模組，並在子行程裡擋掉 Qt 的匯入後實際建立
   `EditorServices`。`test_public_api_contract.py` 釘住 `je_editor.__all__` 的既有名稱、PyBreeze 以模組路徑匯入的
@@ -660,7 +670,7 @@ Qt 的高亮器重畫時會送出 `textChanged`（不是 `contentsChange`），�
 1. **`code_edit_plaintext.py` 3,222 行、`CodeEditor` 有 189 個方法**，明顯與 CLAUDE.md 的「避免 god class」相衝。
    目前靠把狀態外包給十多個 manager 緩解，但方法本身（文字轉換、繪製、快捷鍵、LSP 回呼）仍集中在同一類別。
    若要拆，`_paint_*` 系列與 `*_selection` 系列是最自然的切分線。
-2. **`git_client_gui.py` 1,072 行**，`GitGui` 一個類別同時負責 UI 佈局、diff 呈現、Git 操作與主題套用。
+2. **`git_client_gui.py` 1,227 行**，`GitGui` 一個類別同時負責 UI 佈局、diff 呈現、Git 操作與主題套用。
 3. **Git 有兩條存取路徑**：`GitService` / `file_*`（GitPython）與 `GitCLI`（subprocess）。
    工具列的分支掃描與 checkout 在 QThread 中走 CLI，而 `BlameLoader` / `BaselineLoader` 在 QThread 中走 GitPython。
    考慮到 GitPython 在背景執行緒曾造成 Qt 中止的紀錄，這個分歧值得統一或至少明確記錄理由。

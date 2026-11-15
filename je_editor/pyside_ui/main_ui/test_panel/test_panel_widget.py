@@ -130,6 +130,8 @@ class TestPanelWidget(QWidget):
         self._failures: list = []
         self._tracebacks: dict[str, str] = {}
         self._thread: PytestRunThread | None = None
+        # 啟動過、還沒交給 Qt 刪除的執行緒 / The threads started and not yet handed to Qt for deletion
+        self._run_threads: list[PytestRunThread] = []
 
         self.run_button = QPushButton(word.get("test_panel_run"))
         self.run_button.clicked.connect(self.start_run)
@@ -230,27 +232,34 @@ class TestPanelWidget(QWidget):
         thread = PytestRunThread(
             self._working_dir, node_ids, self.coverage_check.isChecked())
         thread.finished_output.connect(self.apply_output)
-        thread.finished.connect(lambda done=thread: self._release_thread(done))
+        thread.finished.connect(self._release_finished_threads)
         self._thread = thread
+        self._run_threads.append(thread)
         thread.start()
         return True
 
-    def _release_thread(self, thread: PytestRunThread) -> None:
+    def _release_finished_threads(self) -> None:
         """
         跑完的執行緒交給 Qt 刪除，並放掉對它的引用
-        Hand a finished thread to Qt for deletion and let go of the reference to it.
+        Hand the finished threads to Qt for deletion and let go of the references to them.
 
         只排刪除而留著引用的話，下一次問它還在不在跑（再跑一次、或關閉面板）就是
-        去碰一個已經刪掉的物件，整個行程會當掉。
+        去碰一個已經刪掉的物件，整個行程會當掉。這個方法接在執行緒的 ``finished``
+        上，由 Qt 排到畫面執行緒執行。
         Scheduling the deletion while keeping the reference meant the next
         question put to it -- another run, or the panel closing -- reached an
-        object already deleted, which takes the whole process down.
-
-        :param thread: 剛跑完的執行緒 / the thread that just finished
+        object already deleted, which takes the whole process down. This is
+        connected to the thread's ``finished``, and Qt queues it onto the GUI thread.
         """
-        if self._thread is thread:
-            self._thread = None
-        thread.deleteLater()
+        still_running = []
+        for thread in self._run_threads:
+            if not thread.isFinished():
+                still_running.append(thread)
+                continue
+            if self._thread is thread:
+                self._thread = None
+            thread.deleteLater()
+        self._run_threads = still_running
 
     def selected_node_ids(self) -> list[str]:
         """

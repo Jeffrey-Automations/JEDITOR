@@ -15,6 +15,18 @@
   QtWebEngine 在 offscreen 下畫不出網頁內容（分頁標題有載入，畫面是空白），這一張要在真正的螢幕上開視窗才拍得到。
   另外並排差異檢視器的行號區底色是寫死的淺灰（`line_number_code_viewer.py`），在內建深色主題下很突兀，
   應該改用 `actually_color_dict` 的行號顏色。
+- **#27** 仍會佔住畫面執行緒的操作（U-20261115-04 量過，529 個元件的視窗、150 KB 的 Python 檔，offscreen）。
+  已經搬走或消掉的不列。
+  - 換主題約 0.9 ～ 1.1 秒（qt-material 的樣式約 3 秒）：幾乎全是 `QApplication.setStyleSheet` 重新拋光每個
+    元件，Qt 只允許在畫面執行緒做。能做的是減少元件數與各元件自己的樣式表（主視窗、每個編輯器與輸出區都各設了
+    一份字型樣式表，每一份都讓那棵子樹多算一輪）；qt-material 那條路另有它自己組樣式表的時間，可以先在背景組好。
+  - 開一個大檔約 0.4 ～ 0.9 秒：讀檔本身只有幾毫秒，時間在 `setPlainText` 與第一次上色，其中 Tree-sitter 的解析
+    與查詢約 0.2 秒。解析可以搬到背景（先以純文字顯示、解析完再上色），但 `EditorWidget.open_an_file()` 是同步
+    回傳成功與否的，PyBreeze 也照這個用，要改成非同步得兩邊一起動。讀檔的 I/O 目前也還在畫面執行緒上，
+    網路磁碟上會比這裡量到的久。
+  - Git 面板的寫入操作（stage、unstage、commit、checkout、stash、顯示選取檔案的 diff）仍是同步呼叫 GitPython；
+    這次只把「開啟儲存庫」與「重新整理」搬到背景。
+  - 大綱面板以 `ast` 解析目前檔案、指令面板蒐集選單，都在畫面執行緒上，量到的都在 50 毫秒以內。
 - **#21** 〔未確認〕整套測試在機器忙碌時偶爾被 Qt 中止（`Fatal Python error: Aborted`，結束代碼 3）。
   2026-10-08 看到兩次，都是主工作樹裡同時還有別的 pytest 行程在跑的時候；其中一次留有紀錄，停在
   `test_toolbar_actions.py::TestTheBranchScan::test_a_subdirectory_still_finds_the_repository` 的 setup，
