@@ -220,7 +220,7 @@ Plugin browser (pyside_ui/main_ui/plugin_browser/) → github_api.fetch_repo_tre
   `navigation` in `utils/theme/ui_icons.py` is PyBreeze's activity bar icon. PyBreeze calls `CodeEditor.reset_highlighter()` after changing a tab's file and
   after `register_programming_language()`; the keywords it registers for `.json` and YAML suffixes
   are laid over whichever highlighter colours those files. `EditorMain` also sets `services`;
-  PyBreeze does not use that name today. **PyBreeze keeps contract tests of its own**,
+  PyBreeze does not use that name today. PyBreeze registers the environment of the programs the editor starts with `je_editor.set_child_environment_provider(...)` (`utils/child_process/child_environment.py`): the function is called for every start in Run, the debugger, the shell, the terminal and the test panel, and `test/test_child_environment.py` fails on a start added without `env=`. **PyBreeze keeps contract tests of its own**,
   `test/test_utils/test_jeditor_contract.py` in its repository: they pin parameter lists
   (`LspClient.start_for(file_path, servers)`, `EditorMain.close_tab(index)`,
   `FullEditorWidget.__init__`, `server_command(suffix, servers)`), private names

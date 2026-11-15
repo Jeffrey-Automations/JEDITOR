@@ -135,6 +135,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `shared_syntax_engine()` | `adapters/syntax/tree_sitter_engine.py` | 整個行程共用的語法引擎（第一次呼叫時才建立）。裡面只有載入好的文法與編譯好的查詢，都是不會變的資料；每份文件自己的語法樹在 session 裡，不在這裡 |
 | `_image_directory` | `main_ui/shell/ui_style.py` | 內建主題的 QSS 用到的圖檔（分頁關閉鈕）所在的暫存資料夾；第一次套用內建主題時建立，行程結束時由 `atexit` 刪掉 |
 | `EDITOR_EXTEND_TAB` | `main_ui/main_editor.py` | 給下游專案（PyBreeze）塞自訂分頁的掛載點 |
+| `_provider` | `utils/child_process/child_environment.py` | 宿主用 `set_child_environment_provider()` 登記的函式，決定編輯器替使用者啟動的程式拿到什麼環境變數；沒登記時沿用編輯器自己的 |
 | `_plugin_metadata_list` 等 | `plugins/__init__.py` | 已註冊的語言 / 翻譯 / 執行設定 / 中繼資料 |
 
 `core/` 刻意沒有模組層級的單例：`EditorServices` 由建立它的人持有，所以同一個行程嵌入兩個編輯器時不會共用
@@ -211,6 +212,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `syntax/language_rules.py` | 136 | 各語言的關鍵字 / 註解 / 字串規則表 |
 | `lsp/lsp_protocol.py` | 476 | LSP 訊息編解碼：`MessageReader`、request / notification、completion / hover / definition / references / symbols / rename / diagnostics 的回應解析 |
 | `lsp/language_servers.py` | 95 | 副檔名 → 伺服器指令對照，並併入使用者設定 |
+| `child_process/child_environment.py` | 81 | `child_environment()`：執行、除錯（`LocalTaskRunner`）、Shell、終端機（`QProcessEnvironment`）與測試面板啟動程式時用的環境。宿主登記的函式每次啟動都會被呼叫；它出錯或回傳的不是 `str → str` 的對照表時，記錄後改用 `os.environ`。編輯器自己用的工具（git、ruff、語言伺服器）不經過這裡 |
 | `variable_inspector/variable_rows.py` | 143 | 變數檢視器的列（純邏輯）：`namespace_rows()`（和 `%who` 同一套規則：底線開頭與 IPython 自己放的不列）、`describe()`（`reprlib` 限長的 repr，壞掉的 `__repr__` 不會弄垮表格）、`debugger_rows()`、`parse_value()`（只接受字面值） |
 | `test_runner/pytest_output.py` | 302 | 解析 pytest 輸出：每筆結果、失敗位置、traceback、覆蓋率、結尾統計 |
 | `debugger/pdb_commands.py` | 105 | 組出 pdb 指令（設 / 清中斷點、step into/over/out） |
