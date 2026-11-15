@@ -13,13 +13,13 @@ same interface.
 """
 from __future__ import annotations
 
-import os
 import subprocess  # nosec B404 - 執行工作就是它的用途；一律以引數清單啟動，shell=False
 import threading
 from typing import IO
 
 from je_editor.core.events.event_hook import EventHook
 from je_editor.core.process.task_service import OutputStream, TaskSpec, TaskState
+from je_editor.utils.child_process.child_environment import child_environment
 from je_editor.utils.logging.loggin_instance import jeditor_logger
 
 _ENCODING = "utf-8"
@@ -104,7 +104,7 @@ class LocalTask:
                 self._process = subprocess.Popen(  # nosemgrep  # noqa: S603  # nosec B603
                     list(self._spec.command), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE, cwd=self._spec.working_directory or None,
-                    env={**os.environ, **self._spec.environment}, shell=False,
+                    env={**child_environment(), **self._spec.environment}, shell=False,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             except OSError as error:
                 jeditor_logger.warning("task %s could not start: %s", self._spec.command[0], error)

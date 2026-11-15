@@ -402,7 +402,7 @@ yet. See the *Core Services* page of the [documentation](https://je-editor.readt
 - **Navigation History** -- Jump back and forward through your cursor-jump history like a browser (`Alt+Left` / `Alt+Right`). A jump records both where you came from and where you went, so "back" returns to where you started.
 - **Document Outline** -- A dockable tree of the current file's classes, methods, functions and module variables. Python is parsed with `ast`, so no code runs; other languages are asked of their language server, so a TypeScript or Rust file gets an outline too. Double-click to jump to a definition.
 - **Keyboard Shortcuts** (Style > Keyboard Shortcuts) -- Every command's keys in one list, editable. Two commands claiming the same keys cannot be saved, because Qt runs neither of them when that happens; a change takes effect immediately, and only what differs from a default is stored.
-- **Variable Inspector** -- Inspect and debug variables during code execution.
+- **Variable Inspector** -- A searchable table of the variables you can look at right now. With the IPython console open it lists what you defined there, and a value typed into the table is written back to the console (literals only: nothing typed is run). While the debugger is paused it shows the locals of the frame selected in the debug panel instead, read-only.
 
 ### Navigation
 

@@ -289,6 +289,10 @@ japanese_word_dict = {
     "variable_inspector_var_name": "変数名",
     "variable_inspector_var_type": "型",
     "variable_inspector_var_value": "値",
+    "variable_inspector_source_console": "IPython コンソール（値は編集できます）",
+    "variable_inspector_source_debugger": "デバッガー、{frame} で一時停止中（読み取り専用）",
+    "variable_inspector_source_none": (
+        "表示できる変数はまだありません。IPython コンソールを開くか、デバッガーをブレークポイントで停止させてください。"),
     # Dynamic Console
     "dynamic_console_title": "ダイナミックコンソール",
     "dynamic_console_run": "実行",

@@ -135,6 +135,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `shared_syntax_engine()` | `adapters/syntax/tree_sitter_engine.py` | 整個行程共用的語法引擎（第一次呼叫時才建立）。裡面只有載入好的文法與編譯好的查詢，都是不會變的資料；每份文件自己的語法樹在 session 裡，不在這裡 |
 | `_image_directory` | `main_ui/shell/ui_style.py` | 內建主題的 QSS 用到的圖檔（分頁關閉鈕）所在的暫存資料夾；第一次套用內建主題時建立，行程結束時由 `atexit` 刪掉 |
 | `EDITOR_EXTEND_TAB` | `main_ui/main_editor.py` | 給下游專案（PyBreeze）塞自訂分頁的掛載點 |
+| `_provider` | `utils/child_process/child_environment.py` | 宿主用 `set_child_environment_provider()` 登記的函式，決定編輯器替使用者啟動的程式拿到什麼環境變數；沒登記時沿用編輯器自己的 |
 | `_plugin_metadata_list` 等 | `plugins/__init__.py` | 已註冊的語言 / 翻譯 / 執行設定 / 中繼資料 |
 
 `core/` 刻意沒有模組層級的單例：`EditorServices` 由建立它的人持有，所以同一個行程嵌入兩個編輯器時不會共用
@@ -211,6 +212,8 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `syntax/language_rules.py` | 136 | 各語言的關鍵字 / 註解 / 字串規則表 |
 | `lsp/lsp_protocol.py` | 476 | LSP 訊息編解碼：`MessageReader`、request / notification、completion / hover / definition / references / symbols / rename / diagnostics 的回應解析 |
 | `lsp/language_servers.py` | 95 | 副檔名 → 伺服器指令對照，並併入使用者設定 |
+| `child_process/child_environment.py` | 81 | `child_environment()`：執行、除錯（`LocalTaskRunner`）、Shell、終端機（`QProcessEnvironment`）與測試面板啟動程式時用的環境。宿主登記的函式每次啟動都會被呼叫；它出錯或回傳的不是 `str → str` 的對照表時，記錄後改用 `os.environ`。編輯器自己用的工具（git、ruff、語言伺服器）不經過這裡 |
+| `variable_inspector/variable_rows.py` | 147 | 變數檢視器的列（純邏輯）：`namespace_rows()`（和 `%who` 同一套規則：底線開頭與 IPython 自己放的不列）、`describe()`（`reprlib` 限長的 repr，壞掉的 `__repr__` 不會弄垮表格）、`debugger_rows()`、`parse_value()`（只接受字面值） |
 | `test_runner/pytest_output.py` | 302 | 解析 pytest 輸出：每筆結果、失敗位置、traceback、覆蓋率、結尾統計 |
 | `debugger/pdb_commands.py` | 105 | 組出 pdb 指令（設 / 清中斷點、step into/over/out） |
 | `format_code/yapf_format.py` | 48 | 以 yapf（google style）格式化原始碼 |
@@ -320,7 +323,8 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `textedit_code_result/code_record.py` | 89 | `CodeRecord(QTextEdit)`：輸出區，支援搜尋 |
 | `auto_save/auto_save_thread.py` | 120 | `CodeEditSaveThread`：定時存檔；`_TextFetcher` 確保在主執行緒取文字；存檔失敗只記錄，執行緒繼續 |
 | `auto_save/auto_save_manager.py` | 64 | 建立 / 取代分頁的自動儲存執行緒，維護兩個全域字典 |
-| `variable_inspector/inspector_gui.py` | 184 | 變數檢視器：`QAbstractTableModel` + 過濾代理 + GUI |
+| `variable_inspector/inspector_gui.py` | 297 | 變數檢視器：`VariableModel`（顯示一個命名空間，或一組算好的唯讀列；內容沒變就不重設模型）+ 過濾代理 + `VariableInspector`（上方一行說明變數是誰的；看得到時才每 500 ms 更新）。變數由 `set_hub()` 交給它的 `VariableHub` 提供 |
+| `variable_inspector/variable_hub.py` | 223 | `VariableHub(QObject)`：一個視窗裡可以檢視的變數從哪裡來。IPython 主控台建立時登記它行程內的 shell（弱參考，`user_ns` 就是命名空間本身，可以直接改）；除錯器暫停時改為跟著 `DebugController` 的訊號查暫停那一層的區域變數（除錯面板沒開時自己查堆疊，使用者在面板選別層就跟過去），唯讀。`source()` 回答現在該顯示誰的，`changed` 訊號通知檢視器 |
 
 ### 5.7 `pyside_ui/main_ui/` — 主視窗與面板
 
@@ -398,7 +402,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `command_palette/go_to_symbol_dialog.py` | 108 | 在目前檔案中以模糊搜尋跳到符號 |
 | `console_widget/console_gui.py` | 178 | 內嵌終端機 UI：指令歷史、切換工作目錄、輸出顯示 |
 | `console_widget/qprocess_adapter.py` | 134 | `QProcess` 包裝：啟動互動 shell、Windows 切 UTF-8 code page、送指令、停止；關閉時先送 `exit` 請 shell 自己結束，不在畫面執行緒上空等 |
-| `ipython_widget/ipython_console.py` | 78 | qtconsole 的 IPython 分頁 |
+| `ipython_widget/ipython_console.py` | 89 | qtconsole 的 IPython 分頁；建立時把行程內 kernel 的 shell 登記到視窗的 `variable_hub`，關閉時取消 |
 | `ai_widget/chat_ui.py` | 321 | AI 對話面板：供應者與模型選單來自 `services.ai_providers`，對話由 `core/ai` 的 `ChatSession` 保管；送出、邊收邊顯示、停止、新對話、用量與錯誤對每個供應者都是同一段程式碼 |
 | `ai_widget/chat_worker.py` | 129 | `ChatWorker(QObject)`：在 daemon 執行緒呼叫供應者，回覆片段、結果與錯誤以訊號送回 UI 執行緒；執行期間由模組層級的集合留住，面板先關掉也不會把訊號發送端刪掉 |
 | `plugin_browser/plugin_browser_widget.py` | 373 | 插件瀏覽器：列出遠端 repo 的插件、看中繼資料、下載到 `jeditor_plugins/` |
@@ -416,6 +420,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 
 | 模組 | 行 | 功用 |
 | --- | ---: | --- |
+| （視窗屬性） | — | `EditorMain.variable_hub`：每個視窗一個 `VariableHub`，在 `debug_controller` 之後建立；下方面板的變數檢視器、分頁與停駐窗格裡另開的檢視器都接到它 |
 | `debug_panel/debug_controller.py` | 241 | `DebugController(QObject)`：視窗這一端的除錯控制。向 `services.debug_adapters` 要一個工作階段、訂閱它的事件，把事件與查詢的回覆變成 Qt 訊號（工作階段在自己的執行緒上回覆，訊號跨執行緒時由 Qt 排進畫面執行緒）；給工具看的 `telemetry` 輸出不往外送 |
 | `debug_panel/debug_panel_widget.py` | 325 | `DebugPanelWidget`：控制按鈕與狀態、執行緒、呼叫堆疊、變數樹（展開時才查子項目）、輸出與求值。只認 `DebugController`；清空堆疊清單時擋住訊號，Qt 途中移動的「目前項目」才不會被當成使用者選的 |
 | `debug_panel/debug_actions.py` | 224 | 選單、工具列與快捷鍵呼叫的動作：`start_debugging()`、`attach_to_process()`、`edit_breakpoint_condition()`、`show_execution_line()` / `clear_execution_lines()`、`show_debug_panel()`（視窗有外框時顯示側邊欄的除錯面板，沒有才開 dock）；`controller_of()` 在視窗沒有控制器或轉接器沒登記時回傳 `None`，呼叫端據此退回 pdb 主控台 |

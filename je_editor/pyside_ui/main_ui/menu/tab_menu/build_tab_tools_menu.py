@@ -98,7 +98,8 @@ def add_variable_inspector_tab(ui_we_want_to_set: EditorMain) -> None:
     # 在主編輯器中新增變數檢查器分頁
     # Add a variable inspector tab
     ui_we_want_to_set.tab_widget.addTab(
-        VariableInspector(),  # 建立變數檢查器元件 / Create Variable Inspector widget
+        # 建立變數檢查器元件，變數來自視窗的 hub / Create the inspector, fed by the window's hub
+        VariableInspector(getattr(ui_we_want_to_set, "variable_hub", None)),
         f"{language_wrapper.language_word_dict.get('tab_menu_variable_inspector_tab_name')} "
         f"{ui_we_want_to_set.tab_widget.count()}"
     )

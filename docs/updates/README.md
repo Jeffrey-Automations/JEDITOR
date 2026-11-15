@@ -58,6 +58,8 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261116-02 | 2026-11-16 | A host decides the environment of the programs the editor starts | #done #api #process | [2026-11](2026-11.md) |
+| U-20261116-01 | 2026-11-16 | The Variable Inspector shows variables | #done #ui #debug | [2026-11](2026-11.md) |
 | U-20261115-05 | 2026-11-15 | Save in place, open in a tab, and eight more faults PyBreeze had reported | #bugfix #ui | [2026-11](2026-11.md) |
 | U-20261115-04 | 2026-11-15 | What held the GUI thread, measured and moved off it | #perf #ui #threads | [2026-11](2026-11.md) |
 | U-20261115-03 | 2026-11-15 | Screenshots retaken for the new window; screenshots in the docs | #docs #ui | [2026-11](2026-11.md) |
@@ -115,6 +117,6 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 7 |
+| [2026-11.md](2026-11.md) | 2026-11 | 9 |
 | [2026-10.md](2026-10.md) | 2026-10 | 20 |
 | [2026-09.md](2026-09.md) | 2026-09 | 20 |

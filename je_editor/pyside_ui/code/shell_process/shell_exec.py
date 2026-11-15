@@ -13,6 +13,7 @@ from je_editor.pyside_ui.code.base_process_manager import BaseProcessManager
 from je_editor.pyside_ui.code.running_process_manager import run_instance_manager
 from je_editor.pyside_ui.main_ui.editor.editor_widget import EditorWidget
 from je_editor.pyside_ui.main_ui.save_settings.user_color_setting_file import actually_color_dict
+from je_editor.utils.child_process.child_environment import child_environment
 from je_editor.utils.exception.exception_tags import je_editor_init_error
 from je_editor.utils.exception.exceptions import JEditorException
 from je_editor.utils.logging.loggin_instance import jeditor_logger
@@ -98,6 +99,8 @@ class ShellManager(BaseProcessManager):
                 stderr=subprocess.PIPE,
                 stdin=subprocess.PIPE,
                 shell=True,
+                # 宿主決定的環境，而不是編輯器自己的 / The host's choice of environment, not the editor's own
+                env=child_environment(),
             )
             self.still_run_shell = True
 

@@ -1,6 +1,8 @@
 import os
 
-from PySide6.QtCore import QObject, QProcess, Signal, QTimer
+from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, Signal, QTimer
+
+from je_editor.utils.child_process.child_environment import child_environment
 
 # Windows 啟動 shell 後切換 UTF-8 code page 的延遲 / Delay before switching to UTF-8 on Windows
 UTF8_CODEPAGE_DELAY_MS = 500
@@ -49,6 +51,12 @@ class ConsoleProcessAdapter(QObject):
             self.system.emit("Shell already running")  # 如果已經在執行，發送提示 / Emit message if already running
             return
         program, args = self._build_shell_command(shell)  # 建立 shell 指令 / Build shell command
+        # 終端機裡跑的也是使用者的程式：用宿主決定的環境
+        # What runs in the terminal is the user's program too: the host's choice of environment
+        environment = QProcessEnvironment()
+        for name, value in child_environment().items():
+            environment.insert(name, value)
+        self.proc.setProcessEnvironment(environment)
         self.proc.start(program, args)  # 啟動子程序 / Start process
 
         # Windows 特殊處理：設定 UTF-8 編碼 / Windows-specific: set UTF-8 encoding

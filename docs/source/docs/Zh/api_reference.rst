@@ -70,6 +70,28 @@ MainBrowserWidget
 
 詳見 :doc:`how_to_extend_using_pyside` 的完整範例。
 
+編輯器啟動的程式所用的環境變數
+--------------------------------
+
+從編輯器啟動的程式（執行、除錯器、Shell、終端機、測試面板）會沿用編輯器自己的環境。
+嵌入 JEditor 的應用程式若為自己的行程設定了一些變數，可以登記一個函式，回傳子行程該拿到的環境，
+讓那些變數不會進到使用者的程式裡：
+
+.. code-block:: python
+
+   import os
+   from je_editor import set_child_environment_provider
+
+   def without_my_own_variables() -> dict[str, str]:
+       return {name: value for name, value in os.environ.items() if name != "MY_APP_ONLY"}
+
+   set_child_environment_provider(without_my_own_variables)
+
+每啟動一個程式就會呼叫這個函式一次，它必須回傳完整的環境，名稱與值都是字串。函式丟出例外或回傳的不是環境時，
+會改用編輯器自己的環境並記錄下來。``set_child_environment_provider(None)`` 取消登記，
+``je_editor.child_environment()`` 回傳現在子行程會拿到的環境。編輯器自己使用的工具（git、ruff、語言伺服器）
+不受影響。
+
 程序管理器
 -----------
 

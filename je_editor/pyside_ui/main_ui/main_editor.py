@@ -25,6 +25,7 @@ from je_editor.pyside_ui.browser.browser_widget import BrowserWidget
 from je_editor.pyside_ui.browser.main_browser_widget import MainBrowserWidget
 from je_editor.pyside_ui.code.auto_save.auto_save_manager import init_new_auto_save_thread, file_is_open_manager_dict
 from je_editor.pyside_ui.main_ui.ai_widget.chat_worker import cancel_chat_workers
+from je_editor.pyside_ui.code.variable_inspector.variable_hub import VariableHub
 from je_editor.pyside_ui.main_ui.debug_panel.debug_controller import DebugController
 from je_editor.pyside_ui.main_ui.editor.editor_widget import EditorWidget
 from je_editor.pyside_ui.main_ui.menu.set_menu_bar import set_menu_bar
@@ -112,6 +113,10 @@ class EditorMain(QMainWindow, QtStyleTools):
         self.services = build_default_services(Workspace.single_root(os.getcwd()))
         # 除錯面板、選單與編輯器都透過它除錯 / The debug panel, the menus and the editors debug through it
         self.debug_controller = DebugController(self.services, self)
+        # 變數檢視器從它拿變數：IPython 主控台的命名空間，或暫停中的除錯器
+        # The variable inspectors get their variables from it: the IPython
+        # console's namespace, or a paused debugger
+        self.variable_hub = VariableHub(self.debug_controller, self)
         self.extend = extend  # 是否為擴充模式（如 PyBreeze）/ Whether in extend mode (e.g. PyBreeze)
 
         # 確保外部插件已載入（若尚未載入）
@@ -190,6 +195,7 @@ class EditorMain(QMainWindow, QtStyleTools):
         # with the editor tabs in the middle. It is built before the first editor
         # tab so the tabs use the window's shared file tree and output views
         self.workbench = Workbench(self, self.tab_widget)
+        self.workbench.output.variable_inspector.set_hub(self.variable_hub)
 
         # 計時器會在後面初始化並連接 redirect
         # Timer will be initialized later with redirect connection

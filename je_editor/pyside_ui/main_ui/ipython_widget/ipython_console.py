@@ -58,12 +58,23 @@ class IpythonWidget(QWidget):
         # 設定主佈局 / Apply layout
         self.setLayout(self.grid_layout)
 
+        # 讓變數檢視器看得到這個主控台的變數：kernel 在行程內，命名空間就是一個 dict
+        # Let the variable inspector see this console's variables: the kernel is
+        # in this process, so its namespace is a dict
+        self._variable_hub = getattr(main_window, "variable_hub", None)
+        if self._variable_hub is not None:
+            self._variable_hub.add_console(self.kernel.shell)
+
     def close(self) -> None:
         """
         覆寫 close 方法，確保關閉時正確釋放資源
         Override close method to properly release resources
         """
         jeditor_logger.info("IpythonWidget close")
+
+        # 不再讓變數檢視器顯示這個主控台的變數 / Its variables are shown in the inspector no more
+        if self._variable_hub is not None and self.kernel is not None:
+            self._variable_hub.remove_console(self.kernel.shell)
 
         # 停止 kernel client 的通訊管道 / Stop kernel client channels
         if self.kernel_client:
