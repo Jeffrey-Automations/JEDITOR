@@ -5,14 +5,14 @@ import subprocess  # nosec B404 - 呼叫 git 子命令皆以引數清單送入�
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import (
-    QToolBar, QComboBox, QStyle, QLabel, QWidget, QMessageBox
-)
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QToolBar, QComboBox, QLabel, QMessageBox
 
 from je_editor.pyside_ui.main_ui.save_settings.shortcut_setting import bind
+from je_editor.pyside_ui.main_ui.shell.shell_icons import set_action_icon
 from je_editor.utils.logging.loggin_instance import jeditor_logger
 from je_editor.utils.multi_language.multi_language_wrapper import language_wrapper
+from je_editor.utils.theme.ui_stylesheet import MAIN_TOOLBAR_NAME
 
 if TYPE_CHECKING:
     from je_editor.pyside_ui.main_ui.editor.editor_widget import EditorWidget
@@ -24,9 +24,19 @@ if TYPE_CHECKING:
 GIT_BRANCH_LABEL_NAME = "toolbar_git_branch_label"
 
 
-def _icon(widget: QWidget, std: QStyle.StandardPixmap) -> QIcon:
-    """從 QStyle 取得內建圖示 / Get built-in icon from QStyle"""
-    return widget.style().standardIcon(std)
+def _action(main_window: EditorMain, icon: str, text: str) -> QAction:
+    """
+    建立一個帶主題圖示的工具列動作
+    Build a toolbar action carrying a themed icon.
+
+    :param main_window: 動作的父視窗 / the window the action belongs to
+    :param icon: 圖示名稱，見 ``ui_icons`` / the icon's name, see ``ui_icons``
+    :param text: 動作的文字，同時是提示 / the action's text, which is also its tip
+    :return: 新的動作 / the new action
+    """
+    action = QAction(text, main_window)
+    action.setToolTip(text)
+    return set_action_icon(action, icon)
 
 
 def git_branch_label_text() -> str:
@@ -48,6 +58,7 @@ def build_toolbar(main_window: EditorMain) -> None:
     lang = language_wrapper.language_word_dict.get
 
     toolbar = QToolBar(lang("toolbar_title"))
+    toolbar.setObjectName(MAIN_TOOLBAR_NAME)
     toolbar.setMovable(False)
     toolbar.setIconSize(toolbar.iconSize())
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
@@ -55,44 +66,32 @@ def build_toolbar(main_window: EditorMain) -> None:
     main_window.main_toolbar = toolbar
 
     # ── File actions ──────────────────────────────────────────
-    act_new = QAction(_icon(main_window, QStyle.StandardPixmap.SP_FileIcon),
-                      lang("toolbar_new_file"), main_window)
-    act_new.setToolTip(lang("toolbar_new_file"))
+    act_new = _action(main_window, "new_file", lang("toolbar_new_file"))
     act_new.triggered.connect(lambda: _new_file(main_window))
     toolbar.addAction(act_new)
 
-    act_open = QAction(_icon(main_window, QStyle.StandardPixmap.SP_DirOpenIcon),
-                       lang("toolbar_open_file"), main_window)
-    act_open.setToolTip(lang("toolbar_open_file"))
+    act_open = _action(main_window, "open_file", lang("toolbar_open_file"))
     act_open.triggered.connect(lambda: _open_file(main_window))
     toolbar.addAction(act_open)
 
-    act_save = QAction(_icon(main_window, QStyle.StandardPixmap.SP_DialogSaveButton),
-                       lang("toolbar_save_file"), main_window)
-    act_save.setToolTip(lang("toolbar_save_file"))
+    act_save = _action(main_window, "save_file", lang("toolbar_save_file"))
     act_save.triggered.connect(lambda: _save_file(main_window))
     toolbar.addAction(act_save)
 
     toolbar.addSeparator()
 
     # ── Run / Debug / Stop ────────────────────────────────────
-    act_run = QAction(_icon(main_window, QStyle.StandardPixmap.SP_MediaPlay),
-                      lang("toolbar_run"), main_window)
-    act_run.setToolTip(lang("toolbar_run"))
+    act_run = _action(main_window, "run", lang("toolbar_run"))
     bind(act_run, "run_program")
     act_run.triggered.connect(lambda: _run_program(main_window))
     toolbar.addAction(act_run)
 
-    act_debug = QAction(_icon(main_window, QStyle.StandardPixmap.SP_MediaSeekForward),
-                        lang("toolbar_debug"), main_window)
-    act_debug.setToolTip(lang("toolbar_debug"))
+    act_debug = _action(main_window, "debug", lang("toolbar_debug"))
     bind(act_debug, "run_debugger")
     act_debug.triggered.connect(lambda: _run_debugger(main_window))
     toolbar.addAction(act_debug)
 
-    act_stop = QAction(_icon(main_window, QStyle.StandardPixmap.SP_MediaStop),
-                       lang("toolbar_stop"), main_window)
-    act_stop.setToolTip(lang("toolbar_stop"))
+    act_stop = _action(main_window, "stop", lang("toolbar_stop"))
     bind(act_stop, "stop_program")
     act_stop.triggered.connect(lambda: _stop_program(main_window))
     toolbar.addAction(act_stop)
@@ -113,25 +112,18 @@ def build_toolbar(main_window: EditorMain) -> None:
     toolbar.addWidget(branch_combo)
     main_window.toolbar_branch_combo = branch_combo
 
-    act_checkout = QAction(_icon(main_window, QStyle.StandardPixmap.SP_BrowserReload),
-                           lang("toolbar_git_checkout"), main_window)
-    act_checkout.setToolTip(lang("toolbar_git_checkout"))
+    act_checkout = _action(main_window, "checkout", lang("toolbar_git_checkout"))
     act_checkout.triggered.connect(lambda: _git_checkout(main_window))
     toolbar.addAction(act_checkout)
 
-    act_refresh_branches = QAction(
-        _icon(main_window, QStyle.StandardPixmap.SP_ArrowDown),
-        lang("toolbar_git_refresh"), main_window)
-    act_refresh_branches.setToolTip(lang("toolbar_git_refresh"))
+    act_refresh_branches = _action(main_window, "refresh", lang("toolbar_git_refresh"))
     act_refresh_branches.triggered.connect(lambda: _git_refresh_branches(main_window))
     toolbar.addAction(act_refresh_branches)
 
     toolbar.addSeparator()
 
     # ── Search ────────────────────────────────────────────────
-    act_search = QAction(_icon(main_window, QStyle.StandardPixmap.SP_FileDialogContentsView),
-                         lang("toolbar_search"), main_window)
-    act_search.setToolTip(lang("toolbar_search"))
+    act_search = _action(main_window, "search", lang("toolbar_search"))
     bind(act_search, "search_in_files")
     act_search.triggered.connect(lambda: _open_search(main_window))
     toolbar.addAction(act_search)
@@ -139,25 +131,19 @@ def build_toolbar(main_window: EditorMain) -> None:
     # ── Command palette ───────────────────────────────────────
     # 使用 Ctrl+Shift+A（JetBrains 的 Find Action）；Ctrl+Shift+P 已被 pip 安裝佔用
     # Uses Ctrl+Shift+A (JetBrains "Find Action"); Ctrl+Shift+P is taken by pip install
-    act_palette = QAction(_icon(main_window, QStyle.StandardPixmap.SP_FileDialogDetailedView),
-                          lang("toolbar_command_palette"), main_window)
-    act_palette.setToolTip(lang("toolbar_command_palette"))
+    act_palette = _action(main_window, "command_palette", lang("toolbar_command_palette"))
     bind(act_palette, "command_palette")
     act_palette.triggered.connect(lambda: _open_command_palette(main_window))
     toolbar.addAction(act_palette)
     main_window.command_palette_action = act_palette
 
-    act_quick_open = QAction(_icon(main_window, QStyle.StandardPixmap.SP_FileDialogListView),
-                             lang("toolbar_quick_open"), main_window)
-    act_quick_open.setToolTip(lang("toolbar_quick_open"))
+    act_quick_open = _action(main_window, "quick_open", lang("toolbar_quick_open"))
     bind(act_quick_open, "quick_open")
     act_quick_open.triggered.connect(lambda: _open_quick_open(main_window))
     toolbar.addAction(act_quick_open)
     main_window.quick_open_action = act_quick_open
 
-    act_go_to_symbol = QAction(_icon(main_window, QStyle.StandardPixmap.SP_FileDialogInfoView),
-                               lang("toolbar_go_to_symbol"), main_window)
-    act_go_to_symbol.setToolTip(lang("toolbar_go_to_symbol"))
+    act_go_to_symbol = _action(main_window, "go_to_symbol", lang("toolbar_go_to_symbol"))
     bind(act_go_to_symbol, "go_to_symbol")
     act_go_to_symbol.triggered.connect(lambda: _open_go_to_symbol(main_window))
     toolbar.addAction(act_go_to_symbol)
@@ -198,8 +184,8 @@ def _open_file(main_window: EditorMain) -> None:
 
 def _save_file(main_window: EditorMain) -> None:
     """儲存檔案 / Save file"""
-    from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import choose_file_get_save_file_path
-    choose_file_get_save_file_path(main_window)
+    from je_editor.pyside_ui.dialog.file_dialog.save_file_dialog import save_current_file
+    save_current_file(main_window)
 
 
 def _run_program(main_window: EditorMain) -> None:
@@ -445,6 +431,11 @@ def _git_refresh_branches(main_window: EditorMain) -> None:
     scan = _GitBranchScan()
 
     def on_done(heads: list[str], current: str) -> None:
+        # 狀態列也顯示目前分支；宿主視窗沒有這個方法時略過
+        # The status bar shows the current branch too; skipped for a host window without the method
+        show_in_status_bar = getattr(main_window, "set_status_branch", None)
+        if callable(show_in_status_bar):
+            show_in_status_bar(current)
         combo.clear()
         if heads:
             combo.addItems(heads)

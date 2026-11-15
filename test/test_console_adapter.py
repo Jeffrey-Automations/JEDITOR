@@ -1,6 +1,8 @@
 """Tests for the console process adapter's lifecycle and teardown."""
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 from je_editor.pyside_ui.main_ui.console_widget.qprocess_adapter import ConsoleProcessAdapter
@@ -33,6 +35,17 @@ class TestConsoleProcessAdapter:
         assert adapter.is_running()
         adapter.shutdown()
         assert not adapter.is_running()
+
+    def test_an_idle_shell_leaves_when_asked_and_is_not_killed(self, qtbot):
+        # terminate() alone never reaches a console program on Windows, so
+        # every shutdown used to wait out its timeout on the GUI thread.
+        adapter = ConsoleProcessAdapter()
+        with qtbot.waitSignal(adapter.started, timeout=5000):
+            adapter.start_shell()
+        with patch.object(adapter.proc, "kill") as killed:
+            adapter.shutdown(wait_ms=10_000)
+        assert not adapter.is_running()
+        killed.assert_not_called()
 
     def test_starting_twice_reports_already_running(self, qtbot):
         adapter = ConsoleProcessAdapter()

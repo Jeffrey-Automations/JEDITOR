@@ -52,7 +52,7 @@ JEditor will automatically install the following dependencies:
    * - PySide6
      - GUI framework (Qt for Python)
    * - qt-material
-     - Dark / Light material themes
+     - The optional Material window themes
    * - yapf
      - Python code formatting
    * - jedi
@@ -95,8 +95,14 @@ Launching JEditor
 
    start_editor()
 
-After launching, JEditor opens with a dark-themed interface by default. You can change the theme
-from the **UI Style** menu at any time.
+After launching, JEditor opens with the JEditor Dark theme by default: an activity bar and the
+Explorer on the left, the editor tabs in the middle and the Output panel below them. You can
+change the theme from the **UI Style** menu at any time, and open or close each area from the
+**View** menu.
+
+.. image:: image/screenshot-main-window.png
+   :alt: The JEditor window
+   :align: center
 
 Project Structure
 ------------------

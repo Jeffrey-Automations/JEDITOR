@@ -1,7 +1,8 @@
 """Tests for parsing pytest output and showing it in the test panel."""
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6.QtWidgets import QApplication
@@ -361,6 +362,48 @@ class TestTargetedRuns:
         panel.apply_output(SAMPLE_OUTPUT)
         panel.result_tree.topLevelItem(0).setSelected(True)
         assert panel.selected_node_ids() == ["test/test_alpha.py::TestAlpha::test_two"]
+
+
+class TestAFinishedRun:
+    """
+    A finished run's thread is deleted by Qt, so the panel must not keep it.
+
+    It used to: closing the panel after a run, or starting another, then asked a
+    deleted thread whether it was running and crashed the process.
+    """
+
+    def _run_to_the_end(self, panel, qtbot):
+        with patch(
+            "je_editor.pyside_ui.main_ui.test_panel.test_panel_widget.subprocess.run",
+            return_value=SimpleNamespace(stdout=SAMPLE_OUTPUT, stderr=""),
+        ):
+            assert panel.start_run() is True
+            thread = panel._thread
+            with qtbot.waitSignal(thread.finished, timeout=10_000):
+                pass
+        qtbot.waitUntil(lambda: panel._thread is None, timeout=10_000)
+
+    def test_the_panel_lets_go_of_the_thread(self, panel, qtbot):
+        self._run_to_the_end(panel, qtbot)
+        assert panel.results()
+
+    def test_another_run_can_start_afterwards(self, panel, qtbot):
+        self._run_to_the_end(panel, qtbot)
+        self._run_to_the_end(panel, qtbot)
+        assert panel.run_button is not None
+
+    def test_a_thread_still_running_is_kept(self, panel):
+        from je_editor.pyside_ui.main_ui.test_panel.test_panel_widget import PytestRunThread
+        waiting = PytestRunThread(".")
+        panel._thread = waiting
+        panel._run_threads.append(waiting)
+        panel._release_finished_threads()
+        # Never started, so not finished: it is neither dropped nor deleted.
+        assert panel._thread is waiting
+        assert panel._run_threads == [waiting]
+        panel._thread = None
+        panel._run_threads.clear()
+        waiting.deleteLater()
 
 
 class TestFiltering:

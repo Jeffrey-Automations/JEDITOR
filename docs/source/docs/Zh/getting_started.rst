@@ -52,7 +52,7 @@ JEditor 會自動安裝以下依賴套件：
    * - PySide6
      - GUI 框架（Qt for Python）
    * - qt-material
-     - 深色 / 淺色 Material 主題
+     - 可另外選用的 Material 視窗主題
    * - yapf
      - Python 程式碼格式化
    * - jedi
@@ -95,7 +95,12 @@ JEditor 會自動安裝以下依賴套件：
 
    start_editor()
 
-啟動後，JEditor 預設以深色主題開啟。您可以隨時從 **UI Style** 選單更換主題。
+啟動後，JEditor 預設以 JEditor Dark 主題開啟：左邊是活動列與檔案總管，中間是編輯分頁，下方是輸出面板。
+您可以隨時從 **UI Style** 選單更換主題，並從 **檢視** 選單開關每一區。
+
+.. image:: image/screenshot-main-window.png
+   :alt: JEditor 視窗
+   :align: center
 
 專案結構
 ---------

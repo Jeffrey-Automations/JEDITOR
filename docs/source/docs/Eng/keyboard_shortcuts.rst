@@ -11,6 +11,10 @@ immediately, and only what differs from a default is stored. Only the keys handl
 directly by the editing area — listed under `Fixed Keys`_ — are not in that list and
 cannot be reassigned.
 
+.. image:: image/screenshot-shortcut-settings.png
+   :alt: The keyboard shortcut settings
+   :align: center
+
 File Operations
 ----------------
 
@@ -201,6 +205,14 @@ Macros and View
      - Toggle the split view
    * - ``Ctrl+Alt+M``
      - Toggle the minimap
+   * - ``Ctrl+Shift+B``
+     - Toggle the side bar
+   * - ``Ctrl+```
+     - Toggle the bottom panel
+   * - ``Ctrl+Alt+I``
+     - Toggle the secondary side bar (AI chat)
+   * - ``Ctrl+Shift+E``
+     - Show the Explorer
    * - ``Alt+W``
      - Toggle word wrap
    * - ``Ctrl++`` or ``Ctrl+=`` / ``Ctrl+-``

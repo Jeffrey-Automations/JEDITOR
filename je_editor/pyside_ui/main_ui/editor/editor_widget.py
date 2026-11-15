@@ -12,33 +12,30 @@ if TYPE_CHECKING:
     from je_editor.pyside_ui.code.shell_process.shell_exec import ShellManager
     from je_editor.pyside_ui.code.code_process.code_exec import ExecManager
 
-import pathlib
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QFileInfo, QDir, QFileSystemWatcher
+from PySide6.QtCore import Qt, QFileSystemWatcher
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
-from PySide6.QtWidgets import QWidget, QGridLayout, QSplitter, QScrollArea, QFileSystemModel, QTreeView, QTabWidget, \
-    QMessageBox, QHBoxLayout, QComboBox, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QGridLayout, QSplitter, QScrollArea, QTreeView, QMessageBox, QHBoxLayout
 
 from je_editor.pyside_ui.code.auto_save.auto_save_manager import auto_save_manager_dict, init_new_auto_save_thread, \
     file_is_open_manager_dict
-from je_editor.pyside_ui.main_ui.console_widget.console_gui import ConsoleWidget
-from je_editor.pyside_ui.code.variable_inspector.inspector_gui import VariableInspector
-from je_editor.pyside_ui.git_ui.git_client.git_client_gui import GitGui
 from je_editor.pyside_ui.code.auto_save.auto_save_thread import CodeEditSaveThread
 from je_editor.pyside_ui.code.code_format.pep8_format import PEP8FormatChecker
 from je_editor.pyside_ui.code.plaintext_code_edit.code_edit_plaintext import CodeEditor
 from je_editor.pyside_ui.code.minimap.minimap_widget import MinimapWidget
 from je_editor.pyside_ui.code.split_view.split_editor_view import SplitEditorView
-from je_editor.pyside_ui.code.textedit_code_result.code_record import CodeRecord
 from je_editor.pyside_ui.main_ui.save_settings.user_color_setting_file import actually_color_dict
 from je_editor.pyside_ui.main_ui.save_settings.user_setting_file import user_setting_dict
-from je_editor.pyside_ui.main_ui.workspace.workspace_roots import labelled_root_paths
+from je_editor.pyside_ui.main_ui.shell.explorer_panel import ExplorerPanel
+from je_editor.pyside_ui.main_ui.shell.output_panels import OutputPanels
+from je_editor.pyside_ui.main_ui.shell.workbench import reveal_view, workbench_of
 from je_editor.utils.encodings.text_codec import (
     DEFAULT_ENCODING, LINE_ENDING_LF
 )
 from je_editor.utils.exception.exceptions import JEditorOpenFileException
 from je_editor.utils.file.open.open_file import read_file_with_encoding
+from je_editor.utils.shell.shell_views import VIEW_FORMAT_CHECK
 
 
 def report_open_failure(parent: QWidget, file_path, error: JEditorOpenFileException) -> None:
@@ -59,16 +56,23 @@ def report_open_failure(parent: QWidget, file_path, error: JEditorOpenFileExcept
 class EditorWidget(QWidget):
     """
     EditorWidget 是主要的程式碼編輯器元件，包含：
-    - 專案檔案樹狀檢視
     - 程式碼編輯區
-    - 執行結果、格式檢查、除錯輸出
     - 自動儲存與檔案管理
+    - 專案檔案樹狀檢視，以及執行結果、格式檢查、除錯輸出等面板
 
     EditorWidget is the main code editor widget, including:
-    - Project file tree view
     - Code editing area
-    - Execution result, format check, debugger output
     - Auto-save and file management
+    - Project file tree view, and the run result, format check, debugger output views
+
+    主視窗有外框（``workbench``）時，檔案樹與輸出面板是整個視窗共用的那一組，放在
+    側邊欄與下方面板，這裡的屬性只是指向它們；沒有外框的宿主視窗裡，這個元件自己
+    建一組並排在編輯器旁邊。兩種情況下屬性名稱都一樣。
+    When the main window has a shell (``workbench``), the file tree and the
+    output views are the set the whole window shares, placed in the side bar and
+    the bottom panel, and the attributes here merely point at them. In a host
+    window without one this widget builds a set of its own beside its editor.
+    The attribute names are the same either way.
     """
 
     def __init__(self, main_window: EditorMain) -> None:
@@ -84,7 +88,6 @@ class EditorWidget(QWidget):
         # written back unchanged on save
         self.file_encoding: str = DEFAULT_ENCODING
         self.line_ending: str = LINE_ENDING_LF
-        self.tree_view_scroll_area = None
         self.project_treeview: QTreeView | None = None
         self.project_treeview_model = None
         self.python_compiler = None
@@ -101,6 +104,10 @@ class EditorWidget(QWidget):
 
         # ---------------- UI 初始化 ----------------
         self.grid_layout = QGridLayout(self)
+        self.grid_layout.setContentsMargins(0, 0, 0, 0)
+        # 視窗的外框；沒有的話這個分頁自己帶檔案樹與輸出面板
+        # The window's shell; without one this tab carries its own tree and output views
+        self._workbench = workbench_of(main_window)
         self.setWindowTitle(language_wrapper.language_word_dict.get("application_name"))
 
         # 建立專案檔案樹狀檢視 / Setup project tree view
@@ -122,9 +129,8 @@ class EditorWidget(QWidget):
         self._file_watcher.fileChanged.connect(self._on_file_changed_externally)
         self._ignore_next_change = False
 
-        # 程式碼編輯器與輸出區 / Code editor and result area
+        # 程式碼編輯器 / Code editor
         self.code_edit = CodeEditor(self)
-        self.code_result = CodeRecord()
 
         # 監聽文字變更以標記未儲存狀態 / Track text changes for unsaved indicator
         # 用 contentsChange 而不是 textChanged：高亮器重畫時也會送出 textChanged，
@@ -133,46 +139,29 @@ class EditorWidget(QWidget):
         # textChanged too, which left a tab marked unsaved after opening a file or
         # switching theme. contentsChange is sent only when the content changed
         self.code_edit.document().contentsChange.connect(self._on_contents_change)
-        self.code_result_cursor = self.code_result.textCursor()
 
-        # 捲動區包裝編輯器與輸出 / Scroll areas for editor and result
+        # 捲動區包裝編輯器 / Scroll area for the editor
         self.code_edit_scroll_area = QScrollArea()
         self.code_edit_scroll_area.setWidgetResizable(True)
         self.code_edit_scroll_area.setViewportMargins(0, 0, 0, 0)
         self.code_edit_scroll_area.setWidget(self.code_edit)
 
-        self.code_result_scroll_area = QScrollArea()
-        self.code_result_scroll_area.setWidgetResizable(True)
-        self.code_result_scroll_area.setViewportMargins(0, 0, 0, 0)
-        self.code_result_scroll_area.setWidget(self.code_result)
-
-        # 格式檢查與除錯輸出 / Format check and debugger output
-        self.format_check_result = CodeRecord()
-        self.debugger_result = CodeRecord()
-
-        # 終端機 / Terminal console
-        self.console_widget = ConsoleWidget(self)
-
-        # 變數查看器 / Variable inspector
-        self.variable_inspector = VariableInspector()
-
-        # Git 用戶端 / Git client
-        self.git_gui = GitGui()
-
+        # 輸出類的面板：有外框時用視窗共用的那一組
+        # The output views: the window's shared set when there is a shell
+        self._owns_panels = self._workbench is None
+        self._output_panels = OutputPanels(self) if self._owns_panels else self._workbench.output
+        self.code_result = self._output_panels.code_result
+        self.code_result_cursor = self.code_result.textCursor()
+        self.code_result_scroll_area = self._output_panels.code_result_scroll_area
+        self.format_check_result = self._output_panels.format_check_result
+        self.debugger_result = self._output_panels.debugger_result
+        self.console_widget = self._output_panels.console_widget
+        self.variable_inspector = self._output_panels.variable_inspector
+        self.git_gui = self._output_panels.git_gui
         # 輸出分頁 (執行結果 / 格式檢查 / 除錯 / 終端機 / 變數查看器 / Git) / Output tabs
-        self.code_difference_result = QTabWidget()
-        self.code_difference_result.addTab(
-            self.code_result_scroll_area, language_wrapper.language_word_dict.get("editor_code_result"))
-        self.code_difference_result.addTab(
-            self.format_check_result, language_wrapper.language_word_dict.get("editor_format_check"))
-        self.code_difference_result.addTab(
-            self.debugger_result, language_wrapper.language_word_dict.get("editor_debugger_input_title_label"))
-        self.code_difference_result.addTab(
-            self.console_widget, language_wrapper.language_word_dict.get("editor_terminal"))
-        self.code_difference_result.addTab(
-            self.variable_inspector, language_wrapper.language_word_dict.get("variable_inspector_title"))
-        self.code_difference_result.addTab(
-            self.git_gui, language_wrapper.language_word_dict.get("tab_menu_git_client_tab_name"))
+        self.code_difference_result = (
+            self._output_panels.as_tab_widget() if self._owns_panels
+            else self._workbench.bottom_panel)
 
         # 同檔分割檢視與縮圖，開啟時才建立
         # The same-file split view and the minimap, both created on demand
@@ -187,16 +176,20 @@ class EditorWidget(QWidget):
 
         # 加入分割器 / Add widgets to splitters
         self.edit_splitter.addWidget(self.editor_row)
-        self.edit_splitter.addWidget(self.code_difference_result)
-        self.edit_splitter.setStretchFactor(0, 3)
-        self.edit_splitter.setStretchFactor(1, 1)
-        self.edit_splitter.setSizes([300, 100])
-
-        self.full_splitter.addWidget(self.project_tree_panel)
-        self.full_splitter.addWidget(self.edit_splitter)
-        self.full_splitter.setStretchFactor(0, 1)
-        self.full_splitter.setStretchFactor(1, 3)
-        self.full_splitter.setSizes([100, 300])
+        if self._owns_panels:
+            # 沒有外框：檔案樹在左、輸出面板在編輯器下方
+            # No shell: the tree on the left and the output views below the editor
+            self.edit_splitter.addWidget(self.code_difference_result)
+            self.edit_splitter.setStretchFactor(0, 3)
+            self.edit_splitter.setStretchFactor(1, 1)
+            self.edit_splitter.setSizes([300, 100])
+            self.full_splitter.addWidget(self.project_tree_panel)
+            self.full_splitter.addWidget(self.edit_splitter)
+            self.full_splitter.setStretchFactor(0, 1)
+            self.full_splitter.setStretchFactor(1, 3)
+            self.full_splitter.setSizes([100, 300])
+        else:
+            self.full_splitter.addWidget(self.edit_splitter)
 
         # 設定字體樣式 / Set font style
         self.code_edit.setStyleSheet(
@@ -216,35 +209,23 @@ class EditorWidget(QWidget):
         """
         建立並設定專案檔案樹狀檢視
         Setup and configure project file tree view
+
+        有外框時指向視窗共用的那一棵，點檔案由外框開分頁；沒有外框時自己建一棵，
+        點檔案就開在這個分頁裡。
+        With a shell these point at the tree the window shares, and the shell
+        opens a clicked file in a tab. Without one a tree is built here, and a
+        clicked file opens in this tab.
         """
         jeditor_logger.info("EditorWidget set_project_treeview")
-        self.project_treeview_model = QFileSystemModel()
-        self.project_treeview_model.setRootPath(QDir.currentPath())
-        self.project_treeview = QTreeView()
-        self.project_treeview.setModel(self.project_treeview_model)
-
-        # 工作區有好幾個根目錄時，用這個選單決定樹狀檢視顯示哪一個
-        # With several workspace roots, this list decides which one the tree shows
-        self.project_root_combobox = QComboBox()
-        self.project_root_combobox.currentIndexChanged.connect(self._show_selected_root)
-
-        # 包裝成可捲動區域 / Wrap in scroll area
-        self.tree_view_scroll_area = QScrollArea()
-        self.tree_view_scroll_area.setWidgetResizable(True)
-        self.tree_view_scroll_area.setViewportMargins(0, 0, 0, 0)
-        self.tree_view_scroll_area.setWidget(self.project_treeview)
-        self.grid_layout.addWidget(self.tree_view_scroll_area, 0, 0, 0, 1)
-
-        # 根目錄選單在上、樹狀檢視在下 / The root list above, the tree below
-        self.project_tree_panel = QWidget()
-        panel_layout = QVBoxLayout(self.project_tree_panel)
-        panel_layout.setContentsMargins(0, 0, 0, 0)
-        panel_layout.addWidget(self.project_root_combobox)
-        panel_layout.addWidget(self.project_treeview)
-        self.refresh_project_roots()
-
-        # 點擊檔案時觸發 / Connect click event
-        self.project_treeview.clicked.connect(self.treeview_click)
+        if self._workbench is not None:
+            self._explorer = self._workbench.explorer
+        else:
+            self._explorer = ExplorerPanel(self.main_window)
+            self._explorer.tree.clicked.connect(self.treeview_click)
+        self.project_tree_panel = self._explorer
+        self.project_treeview = self._explorer.tree
+        self.project_treeview_model = self._explorer.model
+        self.project_root_combobox = self._explorer.root_combobox
 
     def refresh_project_roots(self) -> None:
         """
@@ -255,25 +236,7 @@ class EditorWidget(QWidget):
         One root needs no choosing, so the list is hidden and the panel looks as
         it always did.
         """
-        roots = labelled_root_paths(self.main_window)
-        shown = self.project_root_combobox.currentData()
-        self.project_root_combobox.blockSignals(True)
-        try:
-            self.project_root_combobox.clear()
-            for label, path in roots:
-                self.project_root_combobox.addItem(label, path)
-            self.project_root_combobox.setCurrentIndex(
-                max(self.project_root_combobox.findData(shown), 0))
-        finally:
-            self.project_root_combobox.blockSignals(False)
-        self.project_root_combobox.setVisible(len(roots) > 1)
-        self._show_selected_root()
-
-    def _show_selected_root(self) -> None:
-        """讓樹狀檢視顯示選單選中的根目錄 / Make the tree show the root picked in the list."""
-        path = self.project_root_combobox.currentData()
-        if path:
-            self.project_treeview.setRootIndex(self.project_treeview_model.index(path))
+        self._explorer.refresh_roots()
 
     def check_is_open(self, path: Path) -> bool:
         """
@@ -373,13 +336,8 @@ class EditorWidget(QWidget):
         Triggered when user clicks an item in the project tree view.
         """
         jeditor_logger.info("EditorWidget treeview_click")
-        indexes = self.project_treeview.selectedIndexes()
-        if not indexes:
-            return
-        clicked_item: QFileSystemModel = indexes[0]
-        file_info: QFileInfo = self.project_treeview.model().fileInfo(clicked_item)
-        path = pathlib.Path(file_info.absoluteFilePath())
-        if path.is_file():
+        path = self._explorer.selected_path()
+        if path is not None and path.is_file():
             self.open_an_file(path)
 
     def _on_contents_change(self, _position: int, _removed: int, _added: int) -> None:
@@ -460,7 +418,11 @@ class EditorWidget(QWidget):
         jeditor_logger.info("EditorWidget rename_self_tab")
         idx = self.tab_manager.indexOf(self)
         if idx >= 0 and self.current_file is not None:
-            self.tab_manager.setTabText(idx, str(Path(self.current_file)))
+            # 分頁上只放檔名，完整路徑放在提示裡；物件名稱仍是完整路徑，找分頁靠它
+            # The tab shows the file name alone and the tip carries the whole path.
+            # The object name stays the whole path, which is what finds the tab
+            self.tab_manager.setTabText(idx, Path(self.current_file).name)
+            self.tab_manager.setTabToolTip(idx, str(Path(self.current_file)))
             self.setObjectName(str(Path(self.current_file)))
             self._is_modified = False
 
@@ -477,6 +439,7 @@ class EditorWidget(QWidget):
                 self.checker = PEP8FormatChecker(self.current_file)
                 self.checker.check_all_format()
                 self.format_check_result.setPlainText("")
+                reveal_view(self.main_window, VIEW_FORMAT_CHECK)
 
                 # 顯示錯誤訊息並套用顏色 / Display errors with color formatting
                 for error in self.checker.error_list:
@@ -535,6 +498,19 @@ class EditorWidget(QWidget):
         if not file_path.exists():
             return
 
+        # 檔案裡的內容就是編輯器裡的內容：那是我們自己寫的（自動儲存、存檔），不必問。
+        # Windows 上一次寫入會讓監看送出兩次訊號，只數「下一次不算」擋不住第二次，
+        # 使用者就會被自己的自動儲存問「檔案被外部修改了，要重新載入嗎」
+        # The file holds what the editor holds: that was our own write, an
+        # auto-save or a save, and there is nothing to ask. One write raises the
+        # watcher's signal twice on Windows, which counting "ignore the next one"
+        # does not stop, so the editor's own auto-save asked whether to reload a
+        # file "modified externally"
+        if self._file_holds_the_editors_text(file_path):
+            if path not in self._file_watcher.files():
+                self._file_watcher.addPath(path)
+            return
+
         reply = QMessageBox.question(
             self,
             language_wrapper.language_word_dict.get("file_changed_externally_title"),
@@ -566,6 +542,21 @@ class EditorWidget(QWidget):
         if path not in self._file_watcher.files():
             self._file_watcher.addPath(path)
 
+    def _file_holds_the_editors_text(self, file_path: Path) -> bool:
+        """
+        磁碟上的檔案內容是不是跟編輯器裡的一樣
+        Whether the file on disk holds the same text as the editor.
+
+        :param file_path: 要比對的檔案 / the file to compare
+        :return: 一樣時為 ``True``；讀不了時為 ``False``
+            ``True`` when they match, ``False`` when the file cannot be read
+        """
+        try:
+            result = read_file_with_encoding(str(file_path), self.file_encoding)
+        except JEditorOpenFileException:
+            return False
+        return result is not None and result[1] == self.code_edit.toPlainText()
+
     def close(self) -> bool:
         """
         關閉編輯器，釋放資源並移除自動儲存紀錄。
@@ -584,9 +575,11 @@ class EditorWidget(QWidget):
             self.code_save_thread.still_run = False
             self.code_save_thread = None
 
-        # 關閉內嵌終端機的互動式 shell / Shut down the embedded console's interactive shell
-        if self.console_widget is not None:
-            self.console_widget.close()
+        # 關閉內嵌終端機的互動式 shell；視窗共用的那一個由外框在視窗關閉時處理
+        # Shut down the embedded console's interactive shell. The one the window
+        # shares is the shell's to close, when the window does
+        if self._owns_panels:
+            self._output_panels.close()
 
         # 停止所有正在執行的子程序 / Stop all running subprocesses
         for mgr in (self.exec_program, self.exec_shell, self.exec_python_debugger):

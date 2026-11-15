@@ -182,3 +182,38 @@ class TestTheLanguageMenu:
         window.menu = QMenuBar()
         set_language_menu(window)
         assert window.language_menu.language_actions["Japanese"].text() == "日本語"
+
+
+class TestTraditionalChineseUsesTaiwanTerms:
+    """Run was 運行, font 字體 and terminal 終端: the words used on the mainland."""
+
+    def test_no_mainland_term_is_left(self):
+        from je_editor.utils.multi_language.traditional_chinese import traditional_chinese_word_dict
+        for key, value in traditional_chinese_word_dict.items():
+            assert "運行" not in value and "字體" not in value, key
+            assert re.search("終端(?!機)", value) is None, key
+
+    def test_the_dock_menus_submenus_are_translated(self):
+        from je_editor.utils.multi_language.traditional_chinese import traditional_chinese_word_dict
+        assert traditional_chinese_word_dict["dock_editor_menu"] == "編輯器"
+        assert traditional_chinese_word_dict["dock_tools_menu"] == "工具"
+
+
+class TestTheHeavyPanelsAreImportedLate:
+    def test_building_the_menus_imports_neither_the_chat_panel_nor_ipython(self):
+        # They made up most of the start: langchain, openai and IPython, for panels nobody had opened.
+        import subprocess
+        import sys
+        code = (
+            "import sys\n"
+            "import je_editor.pyside_ui.main_ui.menu.dock_menu.build_dock_menu\n"
+            "import je_editor.pyside_ui.main_ui.menu.tab_menu.build_tab_tools_menu\n"
+            "heavy = [name for name in ('je_editor.pyside_ui.main_ui.ai_widget.chat_ui',"
+            " 'je_editor.pyside_ui.main_ui.ipython_widget.ipython_console', 'IPython', 'qtconsole')"
+            " if name in sys.modules]\n"
+            "print(heavy)\n"
+        )
+        done = subprocess.run(  # noqa: S603 - this interpreter and a script of literals
+            [sys.executable, "-c", code], capture_output=True, text=True, timeout=120, check=False)
+        assert done.returncode == 0, done.stderr[-2000:]
+        assert done.stdout.strip().splitlines()[-1] == "[]"

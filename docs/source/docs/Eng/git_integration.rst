@@ -5,6 +5,14 @@ JEditor includes a full-featured Git client with a graphical interface, powered 
 `GitPython <https://gitpython.readthedocs.io/>`_. All Git operations are performed
 directly within the editor — no external tools required.
 
+.. image:: image/screenshot-git-panel.png
+   :alt: The Git client in the Source Control view
+   :align: center
+
+.. image:: image/screenshot-diff-side-by-side.png
+   :alt: The side-by-side diff against HEAD
+   :align: center
+
 Opening a Repository
 ---------------------
 

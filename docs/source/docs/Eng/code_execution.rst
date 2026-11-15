@@ -4,6 +4,10 @@ Code Execution & Debugging
 JEditor includes a built-in code execution engine that supports running Python scripts,
 compiled languages, and arbitrary shell commands — all without leaving the editor.
 
+.. image:: image/screenshot-run-output.png
+   :alt: A Python file and the output of running it
+   :align: center
+
 Running Python Scripts
 -----------------------
 
@@ -23,6 +27,10 @@ You can also manually select a Python interpreter from the **Python Env** menu.
 
 Debugging
 ----------
+
+.. image:: image/screenshot-debug-panel.png
+   :alt: The Run and Debug view in the side bar
+   :align: center
 
 Press **F9** to debug the current Python file. The program runs under ``debugpy`` through the
 Debug Adapter Protocol, and the **Debug Panel** opens beside the editor. The program may use

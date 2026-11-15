@@ -3,6 +3,10 @@
 
 JEditor 整合了多種程式碼品質工具，幫助您撰寫乾淨、一致的程式碼。
 
+.. image:: image/screenshot-problems-panel.png
+   :alt: 列出 ruff 診斷的問題面板
+   :align: center
+
 YAPF Python 格式化
 --------------------
 

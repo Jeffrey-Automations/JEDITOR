@@ -169,6 +169,8 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
   - Committing is not pushing: push or open a PR only as this project's branch flow says or when asked.
   - **Commit and push frequently.** After each big feature — a self-contained stage that passes this project's checks — commit and push to the remote; do not pile up a large batch of work before committing or pushing. Smaller batches collide less with other sessions, let CI catch problems earlier, and are easier to revert. Follow this project's normal branch flow (usually `dev`).
 - **`PROGRESS.md`** (repository root, tracked) holds outstanding work only: no finished items, no history, no rules.
+  It is written in Traditional Chinese. Items that need a person at a real machine, screen, browser or server to accept them
+  go in a section named 實體驗收 at the top of the file, above everything else. A finished item is deleted, never left marked as done.
 - **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `PROGRESS.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
 - **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those. `architecture_explore.md` stays the detailed per-module map under its own rule in this file.
 - **Cross-project contracts** are listed in `architecture.md` §6: what other repositories rely on here (CLI flags, import paths, constructor arguments, file layouts) and what this repository relies on elsewhere. No test here protects them, so never rename or remove one without changing its consumers in the same round, and update §6 whenever a contract is added or changes.
@@ -200,3 +202,15 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
   `PYTHONPATH=<this repository> pytest test/test_utils/test_jeditor_contract.py` — and judge the
   result against the same run on the commit before, since PyBreeze's own environment has failures
   of its own.
+
+## Git worktrees: merge and remove
+
+- Every git worktree created for a task must be finished off: merge its branch back into the branch it was started from, then remove the worktree (`git worktree remove <path>`) and delete its branch (`git branch -d <branch>`).
+- Do not leave worktrees behind when the work is done; check `git worktree list` before ending the task.
+- If a worktree cannot be merged yet, say so explicitly instead of leaving it behind silently.
+
+## Test scope: run only what the change touches
+
+When a change needs testing, run only the tests related to it: the test files for the modules you edited, plus the tests that directly depend on them (for example a golden-file or docs-sync test that reads what you changed). Do not re-run the whole suite.
+
+This takes precedence over any other line in this file that asks for the whole suite to be run locally. Run the whole suite only when the user asks for it.

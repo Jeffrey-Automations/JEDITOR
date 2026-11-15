@@ -22,6 +22,10 @@ Two providers ship with the editor:
 
 Open the panel from **Tab → ChatUI** or **Dock → AI**.
 
+.. image:: image/screenshot-ai-chat.png
+   :alt: The AI chat in the secondary side bar
+   :align: center
+
 Setup
 ------
 

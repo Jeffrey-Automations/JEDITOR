@@ -4,6 +4,10 @@
 JEditor 提供兩種互動式主控台：用於執行系統命令的 Shell 主控台，
 以及用於互動式 Python 工作階段的 Jupyter/IPython 主控台。
 
+.. image:: image/screenshot-terminal.png
+   :alt: 下方面板的終端機
+   :align: center
+
 Shell 主控台
 --------------
 

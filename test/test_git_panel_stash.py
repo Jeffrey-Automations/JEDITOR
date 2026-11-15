@@ -31,6 +31,8 @@ def panel(qapp, qtbot, repo):
         widget = GitGui()
     qtbot.addWidget(widget)
     widget._load_repository_from_path(repo)
+    # The repository is opened and read on a background thread
+    qtbot.waitUntil(lambda: widget.current_repo is not None, timeout=10_000)
     yield widget, repo
     widget.close()
 

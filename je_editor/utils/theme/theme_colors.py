@@ -2,10 +2,10 @@
 編輯器自有顏色的深色與淺色預設值
 The editor's own colours, in a dark and a light set.
 
-視窗樣式來自 qt-material，但編輯器自己畫的東西——行號、縮排參考線、變更標記、
-語法高亮——用的是這裡的顏色。它們原本只有一組值，是照深色底調的，所以選了淺色
+視窗樣式來自內建主題或 qt-material，但編輯器自己畫的東西——行號、縮排參考線、
+變更標記、語法高亮——用的是這裡的顏色。它們原本只有一組值，是照深色底調的，所以選了淺色
 樣式之後那些顏色會淡到看不見。
-The window style comes from qt-material, but everything the editor paints itself
+The window style comes from a built-in theme or qt-material, but everything the editor paints itself
 — line numbers, indent guides, change markers, syntax — uses the colours here.
 There used to be only one set, tuned against a dark background, so choosing a
 light style washed them out.
@@ -16,6 +16,8 @@ Pure data and pure logic, with no Qt.
 from __future__ import annotations
 
 from typing import Dict, List
+
+from je_editor.utils.theme.ui_theme import is_builtin_style, is_light_style
 
 Palette = Dict[str, List[int]]
 
@@ -90,15 +92,45 @@ LIGHT_COLORS: Palette = {
 }
 
 
-def is_light_style(style_name: str | None) -> bool:
-    """
-    判斷 qt-material 的樣式名稱是不是淺色的
-    Whether a qt-material style name is a light one.
+# 內建主題在這兩組之上再換掉幾個顏色：行號區與目前行要貼著編輯區的底色，而不是
+# qt-material 那種對比強烈的灰
+# The built-in themes change a few colours on top of those two sets: the gutter
+# and the current line sit close to the editor's background instead of the
+# high-contrast grey that suits qt-material
+_BUILTIN_DARK_OVERRIDES: Palette = {
+    "line_number_color": [110, 116, 128],
+    "line_number_background_color": [30, 32, 38],
+    "current_line_color": [38, 42, 50],
+    "normal_output_color": [213, 217, 224],
+    "indent_guide_color": [48, 52, 62],
+    "minimap_background_color": [24, 26, 31],
+}
+_BUILTIN_LIGHT_OVERRIDES: Palette = {
+    "line_number_color": [140, 146, 156],
+    "line_number_background_color": [255, 255, 255],
+    "current_line_color": [243, 245, 248],
+    "normal_output_color": [31, 35, 40],
+    "indent_guide_color": [225, 228, 233],
+    "minimap_background_color": [245, 246, 248],
+}
 
-    :param style_name: 樣式檔名，例如 ``light_blue.xml`` / a style file name
-    :return: 淺色時為 ``True`` / ``True`` when it is light
-    """
-    return str(style_name or "").strip().lower().startswith("light")
+# 內建深色與淺色主題用的顏色 / The colours for the built-in dark and light themes
+BUILTIN_DARK_COLORS: Palette = {**DARK_COLORS, **_BUILTIN_DARK_OVERRIDES}
+BUILTIN_LIGHT_COLORS: Palette = {**LIGHT_COLORS, **_BUILTIN_LIGHT_OVERRIDES}
+
+# 每一組預設值；判斷「這個顏色是不是使用者自己挑的」時要全部比過
+# Every set of defaults, all of which are compared when deciding whether a
+# colour is one the user picked
+_DEFAULT_PALETTES: tuple[Palette, ...] = (
+    DARK_COLORS, LIGHT_COLORS, BUILTIN_DARK_COLORS, BUILTIN_LIGHT_COLORS)
+
+
+def _source_palette(style_name: str | None) -> Palette:
+    """某個樣式對應的那一組預設值 / The set of defaults a style maps to."""
+    light = is_light_style(style_name)
+    if is_builtin_style(style_name):
+        return BUILTIN_LIGHT_COLORS if light else BUILTIN_DARK_COLORS
+    return LIGHT_COLORS if light else DARK_COLORS
 
 
 def palette_for(style_name: str | None) -> Palette:
@@ -106,11 +138,15 @@ def palette_for(style_name: str | None) -> Palette:
     取得某個樣式該用的顏色組
     The colour set a style should use.
 
-    :param style_name: 樣式檔名 / the style file name
+    :param style_name: 樣式名稱 / the style name
     :return: 顏色組的副本 / a copy of the colours
     """
-    source = LIGHT_COLORS if is_light_style(style_name) else DARK_COLORS
-    return {key: list(value) for key, value in source.items()}
+    return {key: list(value) for key, value in _source_palette(style_name).items()}
+
+
+def _is_a_default(key: str, value: List[int] | None) -> bool:
+    """這個值是不是某一組的預設值 / Whether a value is some set's default."""
+    return any(value == palette.get(key) for palette in _DEFAULT_PALETTES)
 
 
 def retheme(current: Palette, style_name: str | None) -> Palette:
@@ -127,13 +163,13 @@ def retheme(current: Palette, style_name: str | None) -> Palette:
     tell the two apart.
 
     :param current: 目前生效的顏色 / the colours in effect now
-    :param style_name: 要套用的樣式檔名 / the style being applied
+    :param style_name: 要套用的樣式名稱 / the style being applied
     :return: 套用後的顏色 / the colours afterwards
     """
     target = palette_for(style_name)
     result = dict(current)
     for key, value in target.items():
         existing = current.get(key)
-        if existing is None or existing in (DARK_COLORS.get(key), LIGHT_COLORS.get(key)):
+        if existing is None or _is_a_default(key, existing):
             result[key] = list(value)
     return result

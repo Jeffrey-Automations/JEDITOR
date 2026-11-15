@@ -8,6 +8,11 @@ UTF8_CODEPAGE_DELAY_MS = 500
 KILL_DELAY_MS = 1000
 
 
+# 請 shell 結束的指令；cmd、PowerShell、bash 與 sh 都認得
+# The command that asks a shell to end, which cmd, PowerShell, bash and sh all know
+_EXIT_COMMAND = b"exit\n"
+
+
 class ConsoleProcessAdapter(QObject):
     """
     ConsoleProcessAdapter 負責管理 QProcess，提供互動式 shell 的啟動、指令傳送與輸出監聽。
@@ -90,6 +95,15 @@ class ConsoleProcessAdapter(QObject):
         """
         if not self.is_running():
             return
+        # 先請 shell 自己離開：送出 exit 並關掉它的標準輸入。閒著的 shell 幾毫秒內
+        # 就會結束；只靠 terminate 的話，Windows 的主控台程式收不到那個關閉訊息，
+        # 每次關視窗都要在畫面執行緒上白等一整段 wait_ms
+        # Ask the shell to leave by itself first: send exit and close its standard
+        # input. An idle shell ends within milliseconds; terminate alone never
+        # reaches a console program on Windows, so every window close waited out
+        # the whole of wait_ms on the GUI thread for nothing
+        self.proc.write(_EXIT_COMMAND)
+        self.proc.closeWriteChannel()
         self.proc.terminate()
         if self.proc.waitForFinished(wait_ms):
             return
