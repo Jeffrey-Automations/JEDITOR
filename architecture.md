@@ -137,6 +137,7 @@ F9 / Run → Debug → run_debugger() (menu/run_menu/under_run_menu/build_debug_
           → LocalTaskRunner starts `python -m debugpy.adapter` → DAP handshake → program runs
       | no adapter → ExecManager runs `python -m pdb` with ProcessInput (the earlier console)
 session thread: stopped / output / replies → DebugController Qt signals → DebugPanelWidget
+                                              and → EditorMain.variable_hub → VariableInspector (the paused frame's locals)
   → frame chosen → show_execution_line() → go_to_new_tab(path) → CodeEditor.set_execution_line()
 editor shortcuts (continue, step) → CodeEditor.send_debugger_command() → controller, else pdb
 ```

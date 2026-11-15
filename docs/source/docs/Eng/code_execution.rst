@@ -146,7 +146,19 @@ The result panel at the bottom of the editor shows execution output:
 Variable Inspector
 -------------------
 
-The Variable Inspector provides runtime variable debugging in a table view:
+The Variable Inspector is a table of the variables that can be looked at right now. The
+line above the table says whose they are:
+
+- **IPython console** — with the IPython console open (as a tab or a dock), the table
+  lists the variables defined there. The console runs inside the editor's own process,
+  so a value typed into the table is written straight back to it.
+- **Debugger** — while the debugger is paused, the table shows the locals of the frame
+  selected in the debug panel, read-only. When the program runs on or ends, the console's
+  variables come back.
+- With neither, the table is empty and says how to get variables into it.
+
+A program started with **Run** has its variables in another process; pause it under the
+debugger to see them.
 
 .. list-table::
    :header-rows: 1
@@ -163,8 +175,12 @@ The Variable Inspector provides runtime variable debugging in a table view:
 
 Features:
 
-- Live variable inspection during script execution
-- Filters out built-in variables (those starting with ``__``)
-- Editable variable values with AST-based type conversion
-- Dynamic namespace updates
-- Sort and search capabilities
+- Refreshed twice a second while the table is visible; the selection and scroll position
+  are kept when nothing changed
+- Names starting with ``_`` and what IPython itself defines (``In``, ``Out``, ``exit``)
+  are left out, as with ``%who``
+- A value typed into the table is read as a Python literal (``ast.literal_eval``) and
+  never run; anything that is not a literal is stored as a string
+- Long values are shown cut, and a value shown cut is not written back unless it is
+  changed
+- Search by variable name

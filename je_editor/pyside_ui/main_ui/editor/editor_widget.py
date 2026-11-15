@@ -157,6 +157,9 @@ class EditorWidget(QWidget):
         self.debugger_result = self._output_panels.debugger_result
         self.console_widget = self._output_panels.console_widget
         self.variable_inspector = self._output_panels.variable_inspector
+        if self._owns_panels:
+            # 視窗共用的那一個已經由主視窗接好 / The window's shared one is wired by the main window
+            self.variable_inspector.set_hub(getattr(main_window, "variable_hub", None))
         self.git_gui = self._output_panels.git_gui
         # 輸出分頁 (執行結果 / 格式檢查 / 除錯 / 終端機 / 變數查看器 / Git) / Output tabs
         self.code_difference_result = (

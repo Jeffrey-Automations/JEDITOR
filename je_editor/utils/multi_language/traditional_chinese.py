@@ -285,6 +285,9 @@ traditional_chinese_word_dict = {
     "variable_inspector_var_name": "變數名稱",
     "variable_inspector_var_type": "型別",
     "variable_inspector_var_value": "值",
+    "variable_inspector_source_console": "IPython 主控台（值可以編輯）",
+    "variable_inspector_source_debugger": "除錯器，暫停在 {frame}（唯讀）",
+    "variable_inspector_source_none": "目前沒有可顯示的變數。請開啟 IPython 主控台，或讓除錯器停在中斷點。",
     # Dynamic Console
     "dynamic_console_title": "動態主控台",
     "dynamic_console_run": "執行",
