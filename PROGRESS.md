@@ -8,6 +8,9 @@
 
 ## 實體驗收
 
+- **#31** Nuitka 建出的執行檔還沒有在真正的機器上用過。CI 的 `nuitka-build` 只確認它在 offscreen 上能啟動、一分鐘後仍在執行（U-20261116-03）。
+  從 `dev` 最近一次執行的 artifact **JEditor-windows** 下載，在一台沒有裝 Python 的 Windows 上確認：視窗與主題、開檔與存檔、終端機、內嵌瀏覽器（QtWebEngine）、
+  IPython 主控台與變數檢視器、AI 聊天面板都正常，關閉之後沒有留下 `JEditor.exe` 行程。
 - **#28** 新版面與兩個內建主題還沒有在真正的螢幕上看過：U-20261115-01 之後的所有畫面都是 offscreen 渲染擷取的，本機驗證用的也是 PySide6 6.11.2，
   而 `dev` 釘的是 6.12.0。要在實機上確認：活動列切換每個側邊欄面板、點目前面板的圖示會收起側邊欄；下方面板七個分頁與右上角的收起鈕；
   `Ctrl+Shift+B`、``Ctrl+` ``、`Ctrl+Alt+I`、`Ctrl+Shift+E` 四組快捷鍵（``Ctrl+` `` 在不同鍵盤配置下是否按得到）；拖動分隔線後關閉重開，寬度與開著的面板有還原；
@@ -23,6 +26,10 @@
 
 ## 待辦
 
+- **#30** 打包版會把自己當成 Python 啟動：除錯器的轉接器（`adapters/debug/debugpy_adapter.py`，`sys.executable -m debugpy.adapter`）與測試面板
+  （`test_panel_widget.py`，`sys.executable -m pytest`）在打包的執行檔裡，`sys.executable` 是 JEditor 自己，所以按下除錯或執行測試會再開一個編輯器，
+  而不是啟動轉接器或 pytest。要改成用使用者選定的直譯器（`python_compiler`，沒有時找 `venv` 或 `PATH` 上的 Python），找不到就說明原因；
+  判斷是否為打包版要同時認 PyInstaller 的 `sys.frozen` 與 Nuitka 的 `__compiled__`（PyBreeze 的 `utils/packaged_build.py` 是同一件事）。
 - **#1** SonarCloud 的 S125 是誤判，需要在網站上標記：`extend_system_tray.py:27` 的
   `# 初始化並記錄日誌` 被當成「註解掉的程式碼」。這是本專案雙語註解的正常寫法，不該刪。
   要清掉這一項得在 SonarCloud 把 issue 轉成 False Positive（用 API 改狀態需要 Administer

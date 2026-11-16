@@ -310,6 +310,22 @@ cd je_editor
 pip install .
 ```
 
+### Standalone executable (Windows)
+
+CI builds a Windows executable with [Nuitka](https://nuitka.net) on every push and pull
+request to `dev` and checks that it starts. A push to `dev` keeps the build for a week as
+the run's artifact **JEditor-windows** (Actions tab, the run's summary). To build it
+yourself:
+
+```bash
+pip install -r dev_requirements.txt
+python exe/build_nuitka.py          # exe/build/start_editor.dist/JEditor.exe
+python exe/check_build.py exe/build/start_editor.dist/JEditor.exe
+```
+
+Nuitka needs a C compiler (on Windows, the Visual Studio build tools, or a MinGW it
+downloads by itself); a first build takes a long time.
+
 ### Dependencies
 
 Core dependencies are installed automatically:
