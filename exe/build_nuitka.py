@@ -37,6 +37,12 @@ _BUILD_DIR = _EXE_DIR / "build"
 _ICON = _EXE_DIR / "editor.ico"
 # 執行檔所在的資料夾 / Where the executable lands
 DIST_DIR = _BUILD_DIR / "start_editor.dist"
+# 以 bytecode 附上、不編成 C 的套件：AI 面板帶進來的 API 用戶端。它們有數千個模組，
+# 編譯也不會變快（時間花在等網路），卻佔了將近三小時建置的大半
+# Packages shipped as bytecode rather than compiled to C: the API clients the AI
+# panels bring. They hold thousands of modules that gain nothing from compiling
+# (they wait on the network), and were most of a build that took nearly three hours
+BYTECODE_PACKAGES = ("anthropic", "openai", "langsmith")
 
 
 def nuitka_command() -> list[str]:
@@ -59,6 +65,7 @@ def nuitka_command() -> list[str]:
         "--output-filename=JEditor",
         f"--output-dir={_BUILD_DIR}",
         f"--report={_BUILD_DIR / 'compilation-report.xml'}",
+        *(f"--noinclude-custom-mode={package}:bytecode" for package in BYTECODE_PACKAGES),
     ]
     if sys.platform == "win32":
         command.append(f"--windows-icon-from-ico={_ICON}")

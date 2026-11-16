@@ -39,6 +39,12 @@ class TestTheBuildCommand:
         assert {"--include-package=je_editor", "--include-package-data=je_editor"} <= set(command)
         assert command[-1].endswith("start_editor.py")
 
+    def test_the_ai_api_clients_are_left_as_bytecode(self, build):
+        command = build.nuitka_command()
+
+        assert {f"--noinclude-custom-mode={package}:bytecode" for package in build.BYTECODE_PACKAGES} <= set(command)
+        assert "anthropic" in build.BYTECODE_PACKAGES
+
     def test_it_never_asks_a_question_ci_could_not_answer(self, build):
         assert "--assume-yes-for-downloads" in build.nuitka_command()
 
