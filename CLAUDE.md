@@ -86,6 +86,12 @@ python -m build                        # build je_editor (CI builds je_editor_de
 - The matrix is **Python 3.11 to 3.14** on Windows. To reproduce a failure on one of those versions
   locally, use `uv python install <version>` plus `uv venv`.
 - Watch a run with `gh run watch <run-id> --exit-status`, or `gh pr checks <PR> --watch` for a PR.
+- The `nuitka-build` job of `dev.yml` builds the executable with `exe/build_nuitka.py` (Windows,
+  Python 3.12) and checks with `exe/check_build.py` that it starts and is still running a minute later
+  on the offscreen platform. Nothing `needs` it: a build takes long, so it does not hold up a release.
+  Nuitka's cache is kept with `actions/cache`. The AI API clients (`BYTECODE_PACKAGES`) are shipped as
+  bytecode: compiled, they were most of a build that took nearly three hours. A push to `dev` uploads
+  the build (**JEditor-windows**, 7 days); every run uploads Nuitka's compilation report.
 - For analyser detail:
   - Codacy — query
     `https://app.codacy.com/api/v3/analysis/organizations/gh/Integration-Automation/repositories/<repo>/pull-requests/<PR>/issues`
