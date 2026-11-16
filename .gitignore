@@ -126,3 +126,6 @@ dmypy.json
 /.claude/
 /output
 
+
+# Nuitka (exe/build_nuitka.py)
+.nuitka-cache/

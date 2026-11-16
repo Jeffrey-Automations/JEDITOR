@@ -47,6 +47,58 @@ jobs:
         run: python ./test/qt_ui/unit_test/extend_test.py
         shell: cmd
 
+  nuitka-build:
+    # 打包的執行檔：照 exe/build_nuitka.py 的方式建置，再用 exe/check_build.py 檢查它能啟動。
+    # 建置很久，所以沒有工作等它；推到 dev 時保留一週，讓人在真正的機器上試。
+    # The packaged executable: built as exe/build_nuitka.py builds it, then checked
+    # by exe/check_build.py (the editor starts). Nothing waits for this job: a build
+    # takes long. A push to dev keeps the build for a week, to be tried on a real machine.
+    name: Nuitka build
+    runs-on: windows-latest
+    timeout-minutes: 180
+    env:
+      NUITKA_CACHE_DIR: ${{ github.workspace }}\.nuitka-cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Restore Nuitka's cache
+        # C 編譯器的產出與下載的東西；沒有它，建置要多花好幾倍時間
+        # The C compiler's output and the downloads; a build without it takes several times longer
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: .nuitka-cache
+          key: nuitka-${{ runner.os }}-py3.12-${{ hashFiles('requirements.txt', 'dev_requirements.txt', 'exe/build_nuitka.py') }}
+          restore-keys: nuitka-${{ runner.os }}-py3.12-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r dev_requirements.txt
+          pip install -e .
+      - name: Build the executable
+        run: python exe/build_nuitka.py
+      - name: Check the executable
+        run: python exe/check_build.py exe/build/start_editor.dist/JEditor.exe
+      - name: Upload the compilation report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: nuitka-compilation-report
+          path: exe/build/compilation-report.xml
+          if-no-files-found: ignore
+      - name: Upload the executable
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: JEditor-windows
+          path: exe/build/start_editor.dist
+          retention-days: 7
+          if-no-files-found: error
+
   publish-dev:
     # The dev channel. A push to dev that passes the tests is built from dev.toml and uploaded when
     # it is still the tip of dev and ships something the newest je_editor_dev does not.
