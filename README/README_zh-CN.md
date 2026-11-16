@@ -268,6 +268,20 @@ cd je_editor
 pip install .
 ```
 
+### 独立可执行文件（Windows）
+
+CI 会在每次推送到 `dev` 与每个发往 `dev` 的 PR 上，用 [Nuitka](https://nuitka.net) 构建 Windows 可执行文件，
+并确认它能启动。推送到 `dev` 时，构建好的可执行文件会作为该次运行的 artifact **JEditor-windows** 保留一周
+（在 Actions 标签页、该次运行的摘要里）。要自己构建：
+
+```bash
+pip install -r dev_requirements.txt
+python exe/build_nuitka.py          # exe/build/start_editor.dist/JEditor.exe
+python exe/check_build.py exe/build/start_editor.dist/JEditor.exe
+```
+
+Nuitka 需要 C 编译器（Windows 上是 Visual Studio 构建工具，或它自己下载的 MinGW）；第一次构建会花很久。
+
 ### 依赖包
 
 核心依赖包会自动安装：

@@ -29,10 +29,10 @@ window, and plugins extend it through a small registry API.
 | `je_editor/git_client/` | Git access: `GitService` (GitPython) and `GitCLI` (subprocess), blame, HEAD baseline, hunk staging |
 | `je_editor/plugins/` | Plugin registry (`__init__.py`) and `jeditor_plugins/` loader (`plugin_loader.py`) |
 | `test/` | pytest suites; `test/qt_ui/unit_test/` holds the launch scripts CI runs (`start_qt_ui.py`, `extend_test.py`) |
-| `docs/`, `exe/` | Sphinx docs; executable-build entry (`exe/start_editor.py`) and packaging configs |
+| `docs/`, `exe/` | Sphinx docs; executable-build entry (`exe/start_editor.py`), the Nuitka build (`exe/build_nuitka.py`) and the check CI runs on it (`exe/check_build.py`), and the older auto-py-to-exe and InstallForge configs |
 | `pyproject.toml`, `dev.toml`, `MANIFEST.in` | Stable and dev package definitions. CI writes `dev.toml` to `pyproject.toml` to build the dev package, so their dependencies, Python floor, entry points and `[tool.setuptools]` must agree. Neither distribution carries `test/`: package discovery includes `je_editor` only (wheel) and `MANIFEST.in` prunes `test` (sdist). `test/test_dev_toml_parity.py` holds all of it. Both files also name the ruff rule set (`[tool.ruff.lint]`, `E4`/`E7`/`E9`/`F`): ruff's defaults change between releases, so "ruff check clean" is defined here and not by whichever ruff is installed |
 | `scripts/` | `dev_release.py`: release helper the `publish-dev` job runs (next dev version, wheel comparison); standard library only, not part of the package |
-| `.github/workflows/` | `dev.yml`, `stable.yml`: tests on a Windows Python matrix, then one publish job each on `ubuntu-latest` (§3 PyPI packages) |
+| `.github/workflows/` | `dev.yml`, `stable.yml`: tests on a Windows Python matrix, then one publish job each on `ubuntu-latest` (§3 PyPI packages); `dev.yml` also builds the executable with Nuitka and checks that it starts (`nuitka-build`) |
 | `.github/requirements/` | `publish.in` and the `publish.txt` generated from it: the build tooling of the two publish jobs, build backend (`setuptools`) included, pinned by version and hash. The jobs install nothing else and build with `python -m build --no-isolation`, so the backend is the locked one; the lock has to satisfy `build-system.requires` of `pyproject.toml` and `dev.toml` (`test/test_workflow_actions.py`). Dependabot keeps it current |
 
 Dependencies point downwards: `pyside_ui/` → `adapters/` → `core/` → `code_scan/`, `git_client/`,
