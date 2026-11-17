@@ -212,6 +212,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `syntax/language_rules.py` | 136 | 各語言的關鍵字 / 註解 / 字串規則表 |
 | `lsp/lsp_protocol.py` | 476 | LSP 訊息編解碼：`MessageReader`、request / notification、completion / hover / definition / references / symbols / rename / diagnostics 的回應解析 |
 | `lsp/language_servers.py` | 95 | 副檔名 → 伺服器指令對照，並併入使用者設定 |
+| `packaged_build.py` | 97 | `is_packaged()`：`sys.executable` 是不是編輯器本身（PyInstaller 的 `sys.frozen`，或 Nuitka standalone 建置的 `__compiled__`）。`tool_python(chosen, working_folder)`：跑編輯器自己的工具（除錯轉接器、pytest）用的 Python：從原始碼執行時是 `sys.executable`；打包版依序是 Python Env 選的、工作資料夾 `venv`／`.venv` 的、`PATH` 上的（略過 Microsoft Store 的預留程式），都沒有時 `None` |
 | `child_process/child_environment.py` | 81 | `child_environment()`：執行、除錯（`LocalTaskRunner`）、Shell、終端機（`QProcessEnvironment`）與測試面板啟動程式時用的環境。宿主登記的函式每次啟動都會被呼叫；它出錯或回傳的不是 `str → str` 的對照表時，記錄後改用 `os.environ`。編輯器自己用的工具（git、ruff、語言伺服器）不經過這裡 |
 | `variable_inspector/variable_rows.py` | 147 | 變數檢視器的列（純邏輯）：`namespace_rows()`（和 `%who` 同一套規則：底線開頭與 IPython 自己放的不列）、`describe()`（`reprlib` 限長的 repr，壞掉的 `__repr__` 不會弄垮表格）、`debugger_rows()`、`parse_value()`（只接受字面值） |
 | `test_runner/pytest_output.py` | 302 | 解析 pytest 輸出：每筆結果、失敗位置、traceback、覆蓋率、結尾統計 |
@@ -394,7 +395,7 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `problems_panel/problems_panel_widget.py` | 410 | 問題面板：診斷放在自己的 `DiagnosticStore`，依嚴重度（錯誤 / 警告 / 資訊 / 提示）與來源篩選且順序固定、跳到該行、整專案檢查、套用可自動修正項 |
 | `problems_panel/project_lint_worker.py` | 59 | `ProjectLintWorker(QThread)`：背景對整個目錄跑 ruff |
 | `todo_panel/todo_panel_widget.py` | 296 | TODO 面板：背景掃描（`TodoScanThread`）、依標籤篩選、雙擊開檔跳行 |
-| `test_panel/test_panel_widget.py` | 437 | 測試面板：組 pytest 指令（可含覆蓋率）、`PytestRunThread` 背景執行（600 秒逾時）、結果表、traceback、只跑選取 / 只跑失敗 |
+| `test_panel/test_panel_widget.py` | 451 | 測試面板：組 pytest 指令（可含覆蓋率）、pytest 用的 Python 在 `PytestRunThread` 上以 `tool_python()` 找（打包版會查檔案與 PATH，不在畫面執行緒上做），找不到就把 `compiler_not_found_error` 交給面板；`PytestRunThread` 背景執行（600 秒逾時）、結果表、traceback、只跑選取 / 只跑失敗 |
 | `outline_panel/outline_panel_widget.py` | 215 | 大綱面板：Python 用 `ast`，其他語言問語言伺服器，點擊跳行 |
 | `command_palette/command_palette_dialog.py` | 193 | 指令面板：模糊搜尋所有選單指令並執行 |
 | `command_palette/menu_command_collector.py` | 104 | 走訪選單列蒐集可觸發動作（深度上限 8、數量上限 4000） |
@@ -518,9 +519,9 @@ start_editor(debug_mode)                       je_editor/start_editor.py
 | `ai/builtin_providers.py` | 50 | `register_builtin_ai_providers()`：每個供應者拿到「取得自己那組設定」的函式，所以改設定不必重新登記 |
 | `ai/settings_file.py` | 80 | `.jeditor/ai_config.json` 的讀寫；日誌只記路徑、從不記內容（裡面有 API 金鑰） |
 | `process/local_task_runner.py` | 249 | `LocalTaskRunner` / `LocalTask`：`TaskRunner` 的本機實作。以引數清單啟動子程序（從不經過 shell），標準輸出與標準錯誤各一條執行緒讀取，另一條等程序結束並通知結束代碼；`wait()` 等到結束代碼通知出去為止 |
-| `debug/dap_session.py` | 439 | `DapSession`：以 DAP 實作的 `DebugSession`。啟動轉接器後照協定的順序打招呼（`initialize` → `launch` / `attach` → 等 `initialized` 事件 → 送中斷點 → `configurationDone`），把回應與事件轉成核心層的資料物件；不知道被除錯的是哪種語言，轉接器的指令、啟動引數與接上既有程式時的通道都由外面給 |
+| `debug/dap_session.py` | 457 | `DapSession`：以 DAP 實作的 `DebugSession`。轉接器的指令可以是固定的引數清單，或依每次請求給出指令的函式（給不出時不啟動，並在主控台說 `compiler_not_found_error`）。啟動轉接器後照協定的順序打招呼（`initialize` → `launch` / `attach` → 等 `initialized` 事件 → 送中斷點 → `configurationDone`），把回應與事件轉成核心層的資料物件；不知道被除錯的是哪種語言，轉接器的指令、啟動引數與接上既有程式時的通道都由外面給 |
 | `debug/socket_channel.py` | 158 | `SocketChannel`：把一條 TCP 連線包成跟位元組模式的工作一樣的形狀。接上已經帶著轉接器在連接埠等待的程式時用它，之後經 SSH 轉送的遠端除錯也是 |
-| `debug/debugpy_adapter.py` | 132 | Python 的轉接器 debugpy：轉接器的指令（編輯器自己的直譯器）、`launch` / `attach` 引數、接上時直接連到連接埠；`register_builtin_debug_adapters()` 在 debugpy 有安裝時才登記 |
+| `debug/debugpy_adapter.py` | 153 | Python 的轉接器 debugpy（打包版用那次啟動指定的直譯器跑轉接器，見 `utils/packaged_build.tool_python`，而且一律登記）：轉接器的指令（編輯器自己的直譯器）、`launch` / `attach` 引數、接上時直接連到連接埠；`register_builtin_debug_adapters()` 在 debugpy 有安裝時才登記 |
 | `remote/ssh_session.py` | 0 | `SshRemoteSession`：以系統的 `ssh` 指令實作的遠端工作階段。每個遠端操作都是本機的一個 `ssh` 程序（經由本機的 `TaskRunner` 啟動），所以遠端的工作在本機看起來跟本機的工作一樣。一律 `BatchMode`，從不停下來問問題；authority 只收固定的字元且不能以 `-` 開頭，目的地前面一律加 `--`，擋住把主機名稱當成選項的注入 |
 | `remote/remote_helper.py` | 0 | 在遠端機器上執行的小幫手程式（原始碼字串，以 `python -c` 送過去）：讀寫檔案、列目錄、找直譯器、在某個目錄與環境下執行指令。送到遠端的永遠是單純的引數清單，不在遠端的 shell 裡組指令；回來的是 JSON |
 | `syntax/grammar_table.py` | 130 | 內建文法的表（`GrammarSpec`：語言 ID、副檔名、匯入文法套件的函式）、查詢名稱到 `SyntaxCategory` 的對照（`function.builtin` 找不到時退回 `function`），以及讀專案自己查詢檔的 `own_query()`。多支援一種語言就是加一列與一組查詢檔 |

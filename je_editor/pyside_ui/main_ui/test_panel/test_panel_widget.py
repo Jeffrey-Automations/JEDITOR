@@ -22,7 +22,9 @@ from PySide6.QtWidgets import (
 
 from je_editor.pyside_ui.main_ui.workspace.workspace_roots import primary_root_path
 from je_editor.utils.child_process.child_environment import child_environment
+from je_editor.utils.exception.exception_tags import compiler_not_found_error
 from je_editor.utils.logging.loggin_instance import jeditor_logger
+from je_editor.utils.packaged_build import tool_python
 from je_editor.utils.multi_language.multi_language_wrapper import language_wrapper
 from je_editor.utils.test_runner.pytest_output import (
     PytestResult, failure_for_result, parse_coverage, parse_failures, parse_results,
@@ -43,7 +45,7 @@ _TRACEBACK_STRETCH = 2
 
 
 def pytest_command(node_ids: list[str] | None = None,
-                   with_coverage: bool = False) -> list[str]:
+                   with_coverage: bool = False, python: str | None = None) -> list[str]:
     """
     組出執行測試的指令
     Build the command that runs the tests.
@@ -55,9 +57,10 @@ def pytest_command(node_ids: list[str] | None = None,
 
     :param node_ids: 只跑這些測試，``None`` 表示全部 / run only these, or all when ``None``
     :param with_coverage: 是否一併量測覆蓋率 / whether to measure coverage too
+    :param python: 用哪個 Python 跑，預設是編輯器自己的 / the Python to run it with; the editor's own by default
     :return: 引數清單（不經過 shell）/ the argument list, never a shell string
     """
-    command = [sys.executable, "-m", "pytest", "-v", "--tb=short", "-p", "no:cacheprovider"]
+    command = [python or sys.executable, "-m", "pytest", "-v", "--tb=short", "-p", "no:cacheprovider"]
     if with_coverage:
         # 需要目標專案裝有 pytest-cov；沒有的話 pytest 會直接說不認得這個參數
         # This needs pytest-cov in the target project; without it pytest simply
@@ -79,24 +82,32 @@ class PytestRunThread(QThread):
     finished_output = Signal(str)
 
     def __init__(self, working_dir: str, node_ids: list[str] | None = None,
-                 with_coverage: bool = False, parent=None) -> None:
+                 with_coverage: bool = False, parent=None, chosen_python: str | None = None) -> None:
         """
         :param working_dir: 執行測試的目錄 / the directory to run the tests in
         :param node_ids: 只跑這些測試 / run only these tests
         :param with_coverage: 是否一併量測覆蓋率 / whether to measure coverage too
         :param parent: Qt 父物件 / the Qt parent
+        :param chosen_python: 使用者在 Python Env 選的直譯器，打包版用它跑 pytest
+            the interpreter chosen under Python Env, which a packaged build runs pytest with
         """
         super().__init__(parent)
         self.setObjectName("PytestRunThread")
         self._working_dir = working_dir
         self._node_ids = node_ids
         self._with_coverage = with_coverage
+        self._chosen_python = chosen_python
 
     def run(self) -> None:
         """執行測試並回報輸出 / Run the tests and report their output."""
+        # 在這條執行緒上找：打包版要查檔案與 PATH / Looked up on this thread: a packaged build checks files and PATH
+        python = tool_python(self._chosen_python, self._working_dir)
+        if python is None:
+            self.finished_output.emit(compiler_not_found_error)
+            return
         try:
             completed = subprocess.run(  # nosemgrep  # noqa: S603  # nosec B603
-                pytest_command(self._node_ids, self._with_coverage),
+                pytest_command(self._node_ids, self._with_coverage, python),
                 cwd=self._working_dir,
                 env=child_environment(),
                 capture_output=True,
@@ -232,7 +243,8 @@ class TestPanelWidget(QWidget):
         self.run_button.setEnabled(False)
         self.status_label.setText(language_wrapper.language_word_dict.get("test_panel_running"))
         thread = PytestRunThread(
-            self._working_dir, node_ids, self.coverage_check.isChecked())
+            self._working_dir, node_ids, self.coverage_check.isChecked(),
+            chosen_python=getattr(self._main_window, "python_compiler", None))
         thread.finished_output.connect(self.apply_output)
         thread.finished.connect(self._release_finished_threads)
         self._thread = thread

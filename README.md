@@ -326,6 +326,11 @@ python exe/check_build.py exe/build/start_editor.dist/JEditor.exe
 Nuitka needs a C compiler (on Windows, the Visual Studio build tools, or a MinGW it
 downloads by itself); a first build takes a long time.
 
+The executable carries no Python of its own for your programs. Run, the debugger and the
+test panel use the interpreter chosen under **Python Env**, else a `venv/` or `.venv/` in
+the working folder, else a Python on `PATH`. The debugger needs `debugpy` and the test
+panel `pytest` installed in that interpreter.
+
 ### Dependencies
 
 Core dependencies are installed automatically:

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261117-01 | 2026-11-17 | A packaged editor runs its debugger and test panel on the user's Python | #done #bugfix #packaging | [2026-11](2026-11.md) |
 | U-20261116-03 | 2026-11-16 | CI builds the executable with Nuitka and checks that it starts | #done #ci #packaging | [2026-11](2026-11.md) |
 | U-20261116-02 | 2026-11-16 | A host decides the environment of the programs the editor starts | #done #api #process | [2026-11](2026-11.md) |
 | U-20261116-01 | 2026-11-16 | The Variable Inspector shows variables | #done #ui #debug | [2026-11](2026-11.md) |
@@ -118,6 +119,6 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 10 |
+| [2026-11.md](2026-11.md) | 2026-11 | 11 |
 | [2026-10.md](2026-10.md) | 2026-10 | 20 |
 | [2026-09.md](2026-09.md) | 2026-09 | 20 |
