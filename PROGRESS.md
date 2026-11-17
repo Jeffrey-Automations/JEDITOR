@@ -26,10 +26,6 @@
 
 ## 待辦
 
-- **#30** 打包版會把自己當成 Python 啟動：除錯器的轉接器（`adapters/debug/debugpy_adapter.py`，`sys.executable -m debugpy.adapter`）與測試面板
-  （`test_panel_widget.py`，`sys.executable -m pytest`）在打包的執行檔裡，`sys.executable` 是 JEditor 自己，所以按下除錯或執行測試會再開一個編輯器，
-  而不是啟動轉接器或 pytest。要改成用使用者選定的直譯器（`python_compiler`，沒有時找 `venv` 或 `PATH` 上的 Python），找不到就說明原因；
-  判斷是否為打包版要同時認 PyInstaller 的 `sys.frozen` 與 Nuitka 的 `__compiled__`（PyBreeze 的 `utils/packaged_build.py` 是同一件事）。
 - **#1** SonarCloud 的 S125 是誤判，需要在網站上標記：`extend_system_tray.py:27` 的
   `# 初始化並記錄日誌` 被當成「註解掉的程式碼」。這是本專案雙語註解的正常寫法，不該刪。
   要清掉這一項得在 SonarCloud 把 issue 轉成 False Positive（用 API 改狀態需要 Administer
