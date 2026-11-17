@@ -36,6 +36,7 @@ from je_editor.utils.dap.dap_protocol import (
     TYPE_EVENT, TYPE_RESPONSE, MessageReader, encode_message, items_of, message_kind, number_of,
     request, source_breakpoints, text_of
 )
+from je_editor.utils.exception.exception_tags import compiler_not_found_error
 from je_editor.utils.logging.loggin_instance import jeditor_logger
 
 ResponseHandler = Callable[[dict], None]
@@ -58,12 +59,16 @@ class DapSession:
     The debug session implemented with a DAP adapter.
     """
 
-    def __init__(self, adapter_command: Sequence[str], runner: TaskRunner, adapter_id: str,
+    def __init__(self, adapter_command: Sequence[str] | Callable[[object], Sequence[str] | None],
+                 runner: TaskRunner, adapter_id: str,
                  launch_arguments: Callable[[DebugLaunchRequest], dict],
                  attach_arguments: Callable[[DebugAttachRequest], dict],
                  attach_channel: Callable[[DebugAttachRequest], TaskHandle] | None = None) -> None:
         """
-        :param adapter_command: 啟動轉接器的指令 / the command that starts the adapter
+        :param adapter_command: 啟動轉接器的指令；也可以是依每次的請求給出指令的函式，
+            給不出指令（``None``）時就不啟動
+            the command that starts the adapter, or a function giving it for each
+            request; when that gives none (``None``) nothing is started
         :param runner: 用來啟動轉接器的地方；換成遠端的就是遠端除錯
             where the adapter is started; a remote one makes this remote debugging
         :param adapter_id: 轉接器的名稱，會放進 ``initialize`` / the adapter's name, sent in ``initialize``
@@ -77,7 +82,7 @@ class DapSession:
             an adapter process is started as for a launch. Needed where the other
             side waits with an adapter of its own, as debugpy does
         """
-        self._adapter_command = tuple(adapter_command)
+        self._adapter_command = adapter_command if callable(adapter_command) else tuple(adapter_command)
         self._runner = runner
         self._adapter_id = adapter_id
         self._launch_arguments = launch_arguments
@@ -134,7 +139,8 @@ class DapSession:
         :param request_: 啟動所需的資訊 / what to launch
         :return: 轉接器有啟動時為 ``True`` / ``True`` when the adapter started
         """
-        return self._begin("launch", self._launch_arguments(request_), self._adapter_process())
+        task = self._adapter_process(request_)
+        return task is not None and self._begin("launch", self._launch_arguments(request_), task)
 
     def attach(self, request_: DebugAttachRequest) -> bool:
         """
@@ -144,9 +150,9 @@ class DapSession:
         :param request_: 要接上哪裡 / where to attach
         :return: 有連上轉接器時為 ``True`` / ``True`` when the adapter was reached
         """
-        channel = (self._adapter_process() if self._attach_channel is None
+        channel = (self._adapter_process(request_) if self._attach_channel is None
                    else self._attach_channel(request_))
-        return self._begin("attach", self._attach_arguments(request_), channel)
+        return channel is not None and self._begin("attach", self._attach_arguments(request_), channel)
 
     def set_breakpoints(self, uri: str, breakpoints: Sequence[Breakpoint]) -> None:
         """
@@ -291,9 +297,21 @@ class DapSession:
         timer.daemon = True
         timer.start()
 
-    def _adapter_process(self) -> TaskHandle:
-        """準備一個轉接器程序，還不啟動 / Prepare an adapter process without starting it."""
-        return self._runner.create(TaskSpec(self._adapter_command, name="debug adapter", binary=True))
+    def _adapter_process(self, request_: object) -> TaskHandle | None:
+        """
+        準備一個轉接器程序，還不啟動
+        Prepare an adapter process without starting it.
+
+        :param request_: 這次的請求，指令是函式時交給它 / this run's request, given to a command that is a function
+        :return: 程序；給不出指令時為 ``None``，並說明原因 / the process, or ``None`` with the reason said
+        """
+        command = self._adapter_command(request_) if callable(self._adapter_command) else self._adapter_command
+        if not command:
+            # 沒有可以啟動轉接器的程式：說出來，而不是什麼都不發生
+            # No program to start the adapter with: say so rather than do nothing
+            self._output.emit(OutputEvent(_CONSOLE, compiler_not_found_error + "\n"))
+            return None
+        return self._runner.create(TaskSpec(tuple(command), name="debug adapter", binary=True))
 
     def _begin(self, command: str, arguments: dict, task: TaskHandle) -> bool:
         """接上轉接器並開始打招呼 / Reach the adapter and begin the handshake."""

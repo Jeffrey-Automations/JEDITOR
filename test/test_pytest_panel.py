@@ -378,10 +378,8 @@ class TestAFinishedRun:
             return_value=SimpleNamespace(stdout=SAMPLE_OUTPUT, stderr=""),
         ):
             assert panel.start_run() is True
-            thread = panel._thread
-            with qtbot.waitSignal(thread.finished, timeout=10_000):
-                pass
-        qtbot.waitUntil(lambda: panel._thread is None, timeout=10_000)
+            # Not a wait for the thread's finished signal: a quick run can send it before the wait begins
+            qtbot.waitUntil(lambda: panel._thread is None, timeout=10_000)
 
     def test_the_panel_lets_go_of_the_thread(self, panel, qtbot):
         self._run_to_the_end(panel, qtbot)

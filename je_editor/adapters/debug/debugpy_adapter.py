@@ -10,6 +10,14 @@ over standard input and output. The adapter runs on the editor's own
 interpreter, where debugpy is installed, while the program being debugged may
 use another one: debugpy brings itself along, so that environment needs no
 install of its own.
+
+打包好的執行檔沒有自己的直譯器（``sys.executable`` 是編輯器本身），轉接器就用使用者的
+Python 跑（``utils/packaged_build.tool_python``），那個 Python 要裝有 debugpy；沒裝的話，
+它印出的錯誤會出現在除錯主控台。
+A packaged executable has no interpreter of its own (``sys.executable`` is the
+editor itself), so the adapter runs on the user's Python
+(``utils/packaged_build.tool_python``), which needs debugpy installed; when it
+has not, its error shows in the debug console.
 """
 from __future__ import annotations
 
@@ -24,6 +32,7 @@ from je_editor.core.debug.debug_session import (
 )
 from je_editor.core.process.task_service import TaskRunner
 from je_editor.core.registry.named_registry import NamedRegistry
+from je_editor.utils.packaged_build import is_packaged, tool_python
 
 ADAPTER_NAME = "debugpy"
 _ADAPTER_MODULE = "debugpy.adapter"
@@ -40,14 +49,23 @@ def debugpy_available() -> bool:
     return importlib.util.find_spec(ADAPTER_NAME) is not None
 
 
-def adapter_command() -> tuple[str, ...]:
+def adapter_command(interpreter: str | None = None) -> tuple[str, ...] | None:
     """
     啟動 debugpy 轉接器的指令
     The command that starts debugpy's adapter.
 
-    :return: 引數清單 / the argument list
+    :param interpreter: 這次要用的直譯器；只有打包版會用它跑轉接器
+        the interpreter of this run; only a packaged build runs the adapter on it
+    :return: 引數清單；打包版找不到 Python 時為 ``None``
+        the argument list, or ``None`` when a packaged build finds no Python
     """
-    return (sys.executable, "-m", _ADAPTER_MODULE)
+    python = tool_python(interpreter) if is_packaged() else sys.executable
+    return (python, "-m", _ADAPTER_MODULE) if python else None
+
+
+def _command_for(request_: object) -> tuple[str, ...] | None:
+    """一次請求的轉接器指令，用它指定的直譯器 / The adapter's command for one request, on the interpreter it names."""
+    return adapter_command(getattr(request_, "interpreter", "") or None)
 
 
 def launch_arguments(request: DebugLaunchRequest) -> dict:
@@ -112,7 +130,7 @@ def debugpy_session(runner: TaskRunner) -> DapSession:
     :param runner: 用來啟動轉接器的地方 / where the adapter is started
     :return: 還沒啟動的工作階段 / a session that has not started yet
     """
-    return DapSession(adapter_command(), runner, ADAPTER_NAME, launch_arguments, attach_arguments,
+    return DapSession(_command_for, runner, ADAPTER_NAME, launch_arguments, attach_arguments,
                       attach_channel)
 
 
@@ -122,11 +140,14 @@ def register_builtin_debug_adapters(registry: NamedRegistry[DebugSessionFactory]
     登記內建的除錯轉接器
     Register the built-in debug adapters.
 
-    debugpy 沒有安裝時不登記，編輯器就會退回原本的 pdb 主控台。
-    Without debugpy nothing is registered, and the editor falls back to its pdb console.
+    debugpy 沒有安裝時不登記，編輯器就會退回原本的 pdb 主控台。打包版一律登記：轉接器在使用者的
+    Python 上跑，裝在編輯器裡的 debugpy 用不到。
+    Without debugpy nothing is registered, and the editor falls back to its pdb
+    console. A packaged build always registers it: the adapter runs on the
+    user's Python, and a debugpy inside the editor would be of no use.
 
     :param registry: 除錯轉接器的登記表 / the registry of debug adapters
     :param runner: 取得要用來啟動轉接器的執行器 / gives the runner the adapter is started with
     """
-    if debugpy_available():
+    if is_packaged() or debugpy_available():
         registry.register(ADAPTER_NAME, lambda: debugpy_session(runner()))

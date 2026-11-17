@@ -282,6 +282,10 @@ python exe/check_build.py exe/build/start_editor.dist/JEditor.exe
 
 Nuitka 需要 C 编译器（Windows 上是 Visual Studio 构建工具，或它自己下载的 MinGW）；第一次构建会花很久。
 
+可执行文件本身没有可以运行你的程序的 Python。运行、调试器与测试面板会使用在 **Python Env** 选择的解释器，
+否则用工作文件夹里的 `venv/` 或 `.venv/`，再否则用 `PATH` 上的 Python。调试器需要那个解释器装有 `debugpy`，
+测试面板需要 `pytest`。
+
 ### 依赖包
 
 核心依赖包会自动安装：
